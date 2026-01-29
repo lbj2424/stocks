@@ -68,14 +68,11 @@ function makeCharts(rows){
 async function main(){
   const portfolio = await loadCSV("portfolio.csv");
   const pricesFile = await loadJSON("prices.json");
-const priceMap = pricesFile.prices || {};
-
-
   const priceMap = pricesFile.prices || {};
-  document.getElementById("asOf").textContent = `As of: ${pricesFile.asOf || "—"}`;
 
+  document.getElementById("asOf").textContent =
+    `As of: ${pricesFile.asOf || "—"}`;
 
-  // Split into priced vs missing so we don't produce NaN
   const priced = [];
   const missing = [];
 
@@ -99,9 +96,9 @@ const priceMap = pricesFile.prices || {};
   priced.sort((a,b)=> b.value - a.value);
 
   const totalInvested = priced.reduce((s,r)=> s+r.invested, 0);
-  const totalValue    = priced.reduce((s,r)=> s+r.value, 0);
-  const totalGain     = totalValue - totalInvested;
-  const totalGainPct  = totalInvested === 0 ? 0 : totalGain / totalInvested;
+  const totalValue = priced.reduce((s,r)=> s+r.value, 0);
+  const totalGain = totalValue - totalInvested;
+  const totalGainPct = totalInvested === 0 ? 0 : totalGain / totalInvested;
 
   const winner = [...priced].sort((a,b)=> b.gainPct - a.gainPct)[0];
   const loser  = [...priced].sort((a,b)=> a.gainPct - b.gainPct)[0];
@@ -122,15 +119,17 @@ const priceMap = pricesFile.prices || {};
   buildTable(priced);
   makeCharts(priced);
 
-  // Show missing tickers nicely (no crashing)
   if (missing.length) {
-    console.warn("Missing tickers:", missing);
-    const msg = `Missing prices for: ${missing.join(", ")}. The dashboard is showing only tickers with prices.`;
     const pill = document.createElement("span");
     pill.className = "pill";
     pill.textContent = `⚠ Missing: ${missing.length}`;
     document.querySelector(".meta").appendChild(pill);
-    console.log(msg);
   }
 }
+
+main().catch(err => {
+  console.error(err);
+  alert("Dashboard error. Check console.");
+});
+
 
