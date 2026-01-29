@@ -62,11 +62,11 @@ async function loadCSV(path){
       headers.forEach((h,i) => row[h] = parts[i]);
 
       return {
-        ticker: String(row.ticker || "").trim(),
-        shares: toNumber(row.shares),
-        total_cost: toNumber(row.total_cost),
-        avg_cost: toNumber(row.avg_cost) // optional if you ever use it
-      };
+  ticker: String(row.ticker || "").trim(),
+  shares: toNumber(row.shares),
+  total_cost: toNumber(row.total_cost),
+  month: String(row.month || "").trim()
+     };
     });
 }
 
