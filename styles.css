@@ -66,6 +66,9 @@ select:focus {
 
 th.sortable{ cursor: pointer; user-select: none; }
 th.sortable:hover{ background: rgba(255,255,255,.04); }
+th[data-sort]{ cursor:pointer; }
+th[data-sort]:hover{ text-decoration: underline; }
+
 
 
 @media (max-width:900px){
