@@ -156,8 +156,42 @@ function makeCharts(rows){
     }
   });
 }
+function monthLabel(m){
+  // expects YYYY-MM
+  const s = String(m || "").trim();
+  const [y, mo] = s.split("-");
+  const n = Number(mo);
+  const names = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+  if (!y || !n || n < 1 || n > 12) return s;
+  return `${names[n-1]} ${y}`;
+}
+
+const vLinePlugin = {
+  id: "vLinePlugin",
+  afterDatasetsDraw(chart, args, opts) {
+    const { selectedIndex } = opts || {};
+    if (selectedIndex == null || selectedIndex < 0) return;
+
+    const { ctx, chartArea } = chart;
+    const xScale = chart.scales.x;
+    if (!xScale) return;
+
+    const x = xScale.getPixelForValue(selectedIndex);
+    if (x < chartArea.left || x > chartArea.right) return;
+
+    ctx.save();
+    ctx.beginPath();
+    ctx.strokeStyle = "rgba(232,238,252,.35)";
+    ctx.lineWidth = 1;
+    ctx.setLineDash([4,4]);
+    ctx.moveTo(x, chartArea.top);
+    ctx.lineTo(x, chartArea.bottom);
+    ctx.stroke();
+    ctx.restore();
+  }
+};
+
 function makeTimelineChart(portfolioAllRows, priceMap, selectedMonth){
-  // Aggregate total portfolio value by month using current prices
   const monthAgg = new Map(); // month -> { invested, value }
 
   for (const p of portfolioAllRows) {
@@ -183,10 +217,24 @@ function makeTimelineChart(portfolioAllRows, priceMap, selectedMonth){
   }
 
   const months = [...monthAgg.keys()].sort();
-  const values = months.map(m => monthAgg.get(m).value);
+  const investedSeries = months.map(m => monthAgg.get(m).invested);
+  const valueSeries    = months.map(m => monthAgg.get(m).value);
+  const gainPctSeries  = months.map((m, i) => {
+    const inv = investedSeries[i];
+    const val = valueSeries[i];
+    return inv === 0 ? 0 : ((val - inv) / inv) * 100;
+  });
 
-  // Highlight the selected month point (bigger dot)
-  const pointRadius = months.map(m => (m === selectedMonth ? 6 : 2));
+  const labels = months.map(monthLabel);
+
+  // selected month cursor
+  const selectedIndex =
+    selectedMonth && selectedMonth !== "ALL"
+      ? months.indexOf(String(selectedMonth).trim())
+      : -1;
+
+  // prettier point emphasis on selected month
+  const pointRadius = months.map((m, i) => (i === selectedIndex ? 5 : 2));
 
   if (timelineChart) timelineChart.destroy();
 
@@ -196,30 +244,72 @@ function makeTimelineChart(portfolioAllRows, priceMap, selectedMonth){
   timelineChart = new Chart(ctx, {
     type: "line",
     data: {
-      labels: months,
-      datasets: [{
-        label: "Value",
-        data: values,
-        tension: 0.25,
-        pointRadius
-      }]
+      labels,
+      datasets: [
+        {
+          label: "Value",
+          data: valueSeries,
+          tension: 0.25,
+          pointRadius,
+          yAxisID: "y"
+        },
+        {
+          label: "Invested",
+          data: investedSeries,
+          tension: 0.25,
+          pointRadius: 0,
+          borderDash: [6,4],
+          yAxisID: "y"
+        },
+        {
+          label: "Gain %",
+          data: gainPctSeries,
+          tension: 0.25,
+          pointRadius,
+          yAxisID: "y1"
+        }
+      ]
     },
     options: {
       plugins: {
         legend: { labels: { color: "#e8eefc" } },
         tooltip: {
           callbacks: {
-            label: (c) => ` ${money(c.raw)}`
+            label: (c) => {
+              const i = c.dataIndex;
+              const inv = investedSeries[i];
+              const val = valueSeries[i];
+              const gain = val - inv;
+              const gp = inv === 0 ? 0 : (gain / inv) * 100;
+
+              if (c.dataset.label === "Gain %") return ` Gain %: ${gp.toFixed(2)}%`;
+              if (c.dataset.label === "Invested") return ` Invested: ${money(inv)}`;
+              return ` Value: ${money(val)} (Gain: ${money(gain)})`;
+            }
           }
-        }
+        },
+        vLinePlugin: { selectedIndex }
       },
       scales: {
-        x: { ticks: { color: "#e8eefc" } },
-        y: { ticks: { color: "#e8eefc", callback: (v) => money(v) } }
+        x: {
+          ticks: { color: "#e8eefc" },
+          grid: { color: "rgba(255,255,255,.06)" }
+        },
+        y: {
+          ticks: { color: "#e8eefc", callback: (v) => money(v) },
+          grid: { color: "rgba(255,255,255,.06)" }
+        },
+        y1: {
+          position: "right",
+          ticks: { color: "#e8eefc", callback: (v) => `${v}%` },
+          grid: { drawOnChartArea: false }
+        }
       }
-    }
+    },
+    plugins: [vLinePlugin]
   });
 }
+
 
 // ---------- main ----------
 async function main(){
@@ -251,8 +341,7 @@ async function main(){
   }
 
   const selectedMonth = sel ? sel.value : "ALL";
-  makeTimelineChart(portfolio, priceMap, selectedMonth === "ALL" ? "" : selectedMonth);
-
+  makeTimelineChart(portfolio, priceMap, selectedMonth);
 
   const portfolioFiltered =
     selectedMonth === "ALL"
