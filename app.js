@@ -33,6 +33,16 @@ function parseCSVLine(line) {
   return out.map(v => v.trim());
 }
 
+function groupBy(arr, keyFn) {
+  const map = new Map();
+  for (const item of arr) {
+    const k = keyFn(item);
+    if (!map.has(k)) map.set(k, []);
+    map.get(k).push(item);
+  }
+  return map;
+}
+
 function toNumber(v){
   if (v == null) return NaN;
   const s = String(v).trim();
