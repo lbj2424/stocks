@@ -131,11 +131,46 @@ async function main(){
 
   document.getElementById("asOf").textContent = `As of: ${pricesFile.asOf || "—"}`;
 
+  // ---------------- Month dropdown setup ----------------
+  const sel = document.getElementById("monthSelect");
+
+  // Get all months from CSV (ignore blanks)
+  const months = [...new Set(portfolio.map(r => String(r.month || "").trim()).filter(Boolean))].sort();
+
+  // Populate dropdown once
+  if (sel && !sel.dataset.populated) {
+    // Clear to: All + dynamic months
+    sel.innerHTML = `<option value="ALL">All</option>`;
+    for (const m of months) {
+      const opt = document.createElement("option");
+      opt.value = m;
+      opt.textContent = m;
+      sel.appendChild(opt);
+    }
+    sel.dataset.populated = "1";
+
+    // Re-run dashboard on change
+    sel.addEventListener("change", () => main());
+  }
+
+  const selectedMonth = sel ? sel.value : "ALL";
+
+  // Filter portfolio by month
+  const portfolioFiltered =
+    selectedMonth === "ALL"
+      ? portfolio
+      : portfolio.filter(r => String(r.month || "").trim() === selectedMonth);
+
+  // Remove old missing pill if it exists (so they don't stack)
+  const meta = document.querySelector(".meta");
+  const oldMissing = meta?.querySelector(".pill.missingPill");
+  if (oldMissing) oldMissing.remove();
+
+  // ---------------- Core calculations ----------------
   const priced = [];
   const missing = [];
 
-  // ✅ SINGLE clean loop (no duplicates)
-  for (const p of portfolio) {
+  for (const p of portfolioFiltered) {
     const t = String(p.ticker || "").trim().toUpperCase();
     if (!t) continue;
 
@@ -187,11 +222,12 @@ async function main(){
   buildTable(priced);
   makeCharts(priced);
 
+  // Missing pill
   if (missing.length) {
     const pill = document.createElement("span");
-    pill.className = "pill";
+    pill.className = "pill missingPill";
     pill.textContent = `⚠ Missing: ${missing.length}`;
-    document.querySelector(".meta")?.appendChild(pill);
+    meta?.appendChild(pill);
     console.warn("Missing/invalid rows:", missing);
   }
 }
@@ -200,4 +236,3 @@ main().catch(err => {
   console.error(err);
   alert("Dashboard error. Check console.");
 });
-
