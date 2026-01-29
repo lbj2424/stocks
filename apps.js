@@ -176,7 +176,8 @@ const vLinePlugin = {
     const xScale = chart.scales.x;
     if (!xScale) return;
 
-    const x = xScale.getPixelForValue(selectedIndex);
+    const label = chart.data.labels[selectedIndex];
+const x = xScale.getPixelForValue(label);
     if (x < chartArea.left || x > chartArea.right) return;
 
     ctx.save();
@@ -329,11 +330,11 @@ async function main(){
   if (sel && !sel.dataset.populated) {
     sel.innerHTML = `<option value="ALL">All</option>`;
     for (const m of months) {
-      const opt = document.createElement("option");
-      opt.value = m;
-      opt.textContent = m;
-      sel.appendChild(opt);
-    }
+  const opt = document.createElement("option");
+  opt.value = m;                 // ✅ keep raw value like 2025-12
+  opt.textContent = monthLabel(m); // ✅ show pretty label like Dec 2025
+  sel.appendChild(opt);
+}
     sel.dataset.populated = "1";
 
     // ✅ Re-run dashboard on change
