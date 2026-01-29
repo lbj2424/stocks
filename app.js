@@ -5,6 +5,7 @@ function pct(n){ return (n*100).toFixed(2) + "%"; }
 let allocChart = null;
 let gainsChart = null;
 let timelineChart = null;
+let sortState = { key: "value", dir: "desc" }; // default sort like you do now
 
 
 // ---------- CSV + parsing helpers (robust) ----------
@@ -90,7 +91,6 @@ async function loadJSON(path){
   return fetch(path, { cache: "no-store" }).then(r => r.json());
 }
 
-// ---------- UI ----------
 function buildTable(rows){
   const tbody = document.querySelector("#holdingsTable tbody");
   tbody.innerHTML = "";
@@ -112,6 +112,53 @@ function buildTable(rows){
     tbody.appendChild(tr);
   }
 }
+function sortRows(rows, key, dir){
+  const mult = dir === "asc" ? 1 : -1;
+
+  return [...rows].sort((a,b) => {
+    const av = a[key];
+    const bv = b[key];
+
+    // string sort (ticker)
+    if (typeof av === "string" || typeof bv === "string") {
+      return String(av).localeCompare(String(bv)) * mult;
+    }
+
+    // number sort
+    const an = Number(av);
+    const bn = Number(bv);
+    if (Number.isNaN(an) && Number.isNaN(bn)) return 0;
+    if (Number.isNaN(an)) return 1;
+    if (Number.isNaN(bn)) return -1;
+    return (an - bn) * mult;
+  });
+}
+function initMainTableSorting(getCurrentRows){
+  const table = document.getElementById("holdingsTable");
+  if (!table || table.dataset.sortInit) return;
+
+  const headers = table.querySelectorAll("thead th[data-sort]");
+  headers.forEach(th => {
+    th.addEventListener("click", () => {
+      const key = th.dataset.sort;
+
+      // toggle direction if clicking same column
+      if (sortState.key === key) {
+        sortState.dir = sortState.dir === "asc" ? "desc" : "asc";
+      } else {
+        sortState.key = key;
+        sortState.dir = "desc"; // default when switching columns
+      }
+
+      const rows = getCurrentRows();
+      const sorted = sortRows(rows, sortState.key, sortState.dir);
+      buildTable(sorted);
+    });
+  });
+
+  table.dataset.sortInit = "1";
+}
+
 
 function makeCharts(rows){
   // ✅ Aggregate by ticker so charts/legend are readable and stable
@@ -383,8 +430,15 @@ async function main(){
 
   document.getElementById("kpiCount").textContent = String(priced.length);
 
-  buildTable(priced);
-  makeCharts(priced); // ✅ now charts update per month
+ // ✅ sorting hook (works for ALL or month-filtered because priced already filtered)
+initMainTableSorting(() => priced);
+
+// ✅ apply current sort before showing
+const pricedSorted = sortRows(priced, sortState.key, sortState.dir);
+
+buildTable(pricedSorted);
+makeCharts(pricedSorted);
+
 
   if (missing.length) {
     const pill = document.createElement("span");
