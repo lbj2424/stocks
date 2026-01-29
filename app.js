@@ -1,22 +1,55 @@
 function money(n){ return n.toLocaleString(undefined,{style:"currency",currency:"USD"}); }
 function pct(n){ return (n*100).toFixed(2) + "%"; }
 
+function toNumber(v){
+  if (v == null) return NaN;
+  const s = String(v).trim();
+  if (!s) return NaN;
+
+  // handle (123.45) as -123.45
+  const neg = s.startsWith("(") && s.endsWith(")");
+  const cleaned = s
+    .replace(/[,$%]/g, "")   // remove commas, $, %
+    .replace(/[()]/g, "")   // remove parentheses
+    .replace(/\s+/g, "");
+
+  const n = Number(cleaned);
+  return neg ? -n : n;
+}
+
+function normKey(k){
+  return String(k)
+    .trim()
+    .toLowerCase()
+    .replace(/\s+/g, "_"); // "Total Cost" -> "total_cost"
+}
+
 async function loadCSV(path){
   const txt = await fetch(path, { cache: "no-store" }).then(r => r.text());
-  const [header, ...lines] = txt.trim().split(/\r?\n/);
-  const cols = header.split(",").map(s => s.trim());
+  const [headerLine, ...lines] = txt.trim().split(/\r?\n/);
 
-  return lines.map(line => {
-    const parts = line.split(",").map(s => s.trim());
-    const row = {};
-    cols.forEach((c,i) => row[c] = parts[i]);
+  const rawHeaders = headerLine.split(",").map(h => h.trim());
+  const headers = rawHeaders.map(normKey);
 
-    row.shares = Number(row.shares);
-    row.total_cost = Number(row.total_cost);
+  return lines
+    .filter(l => l.trim().length)
+    .map(line => {
+      const parts = line.split(",").map(s => s.trim());
+      const row = {};
+      headers.forEach((h,i) => row[h] = parts[i]);
 
-    return row;
-  });
+      // expected keys after normalization:
+      // ticker, shares, total_cost   (or avg_cost if you still use that)
+      row.ticker = String(row.ticker || "").trim();
+
+      row.shares = toNumber(row.shares);
+      row.total_cost = toNumber(row.total_cost);
+      row.avg_cost = toNumber(row.avg_cost); // optional, in case you keep it
+
+      return row;
+    });
 }
+
 
 
 async function loadJSON(path){
@@ -80,15 +113,35 @@ async function main(){
   const priced = [];
   const missing = [];
 
-  // ✅ NEW LOOP (uses total_cost instead of avg_cost)
   for (const p of portfolio) {
-    const t = String(p.ticker).trim().toUpperCase();
-    const price = priceMap[t];
+  const t = String(p.ticker).trim().toUpperCase();
+  const price = priceMap[t];
 
-    if (typeof price !== "number" || Number.isNaN(price)) {
-      missing.push(t);
-      continue;
-    }
+  if (!t) continue;
+
+  // price must exist
+  if (typeof price !== "number" || Number.isNaN(price)) {
+    missing.push(t);
+    continue;
+  }
+
+  const shares = Number(p.shares);
+  const invested = Number(p.total_cost); // from "Total Cost" column (normalized)
+
+  // guard against bad/missing numbers
+  if (!Number.isFinite(shares) || shares <= 0 || !Number.isFinite(invested)) {
+    missing.push(t);
+    continue;
+  }
+
+  const avg_cost = invested / shares;
+  const value = shares * price;
+  const gain = value - invested;
+  const gainPct = invested === 0 ? 0 : gain / invested;
+
+  priced.push({ ticker: t, shares, avg_cost, price, invested, value, gain, gainPct });
+}
+
 
     const invested = Number(p.total_cost);
     const shares = Number(p.shares);
