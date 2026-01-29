@@ -68,9 +68,12 @@ function makeCharts(rows){
 async function main(){
   const portfolio = await loadCSV("portfolio.csv");
   const pricesFile = await loadJSON("prices.json");
+const priceMap = pricesFile.prices || {};
+
 
   const priceMap = pricesFile.prices || {};
   document.getElementById("asOf").textContent = `As of: ${pricesFile.asOf || "—"}`;
+
 
   // Split into priced vs missing so we don't produce NaN
   const priced = [];
