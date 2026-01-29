@@ -67,42 +67,67 @@ function makeCharts(rows){
 
 async function main(){
   const portfolio = await loadCSV("portfolio.csv");
-  const prices = await loadJSON("prices.json");
+  const pricesFile = await loadJSON("prices.json");
 
-  document.getElementById("asOf").textContent = `As of: ${prices.asOf}`;
+  const priceMap = pricesFile.prices || {};
+  document.getElementById("asOf").textContent = `As of: ${pricesFile.asOf || "—"}`;
 
-  const rows = portfolio.map(p=>{
-    const price = prices.prices[p.ticker];
+  // Split into priced vs missing so we don't produce NaN
+  const priced = [];
+  const missing = [];
+
+  for (const p of portfolio) {
+    const t = String(p.ticker).trim().toUpperCase();
+    const price = priceMap[t];
+
+    if (typeof price !== "number" || Number.isNaN(price)) {
+      missing.push(t);
+      continue;
+    }
+
     const invested = p.shares * p.avg_cost;
     const value = p.shares * price;
     const gain = value - invested;
     const gainPct = invested === 0 ? 0 : gain / invested;
-    return { ...p, price, invested, value, gain, gainPct };
-  }).sort((a,b)=> b.value - a.value);
 
-  const totalInvested = rows.reduce((s,r)=> s+r.invested, 0);
-  const totalValue = rows.reduce((s,r)=> s+r.value, 0);
-  const totalGain = totalValue - totalInvested;
-  const totalGainPct = totalInvested === 0 ? 0 : totalGain / totalInvested;
+    priced.push({ ...p, ticker: t, price, invested, value, gain, gainPct });
+  }
 
-  const winner = [...rows].sort((a,b)=> b.gainPct - a.gainPct)[0];
-  const loser  = [...rows].sort((a,b)=> a.gainPct - b.gainPct)[0];
+  priced.sort((a,b)=> b.value - a.value);
+
+  const totalInvested = priced.reduce((s,r)=> s+r.invested, 0);
+  const totalValue    = priced.reduce((s,r)=> s+r.value, 0);
+  const totalGain     = totalValue - totalInvested;
+  const totalGainPct  = totalInvested === 0 ? 0 : totalGain / totalInvested;
+
+  const winner = [...priced].sort((a,b)=> b.gainPct - a.gainPct)[0];
+  const loser  = [...priced].sort((a,b)=> a.gainPct - b.gainPct)[0];
 
   document.getElementById("kpiInvested").textContent = money(totalInvested);
   document.getElementById("kpiValue").textContent = money(totalValue);
   document.getElementById("kpiGain").textContent = money(totalGain);
   document.getElementById("kpiGainPct").textContent = pct(totalGainPct);
-  document.getElementById("kpiWinner").textContent = winner.ticker;
-  document.getElementById("kpiWinnerPct").textContent = pct(winner.gainPct);
-  document.getElementById("kpiLoser").textContent = loser.ticker;
-  document.getElementById("kpiLoserPct").textContent = pct(loser.gainPct);
-  document.getElementById("kpiCount").textContent = String(rows.length);
 
-  buildTable(rows);
-  makeCharts(rows);
+  document.getElementById("kpiWinner").textContent = winner ? winner.ticker : "—";
+  document.getElementById("kpiWinnerPct").textContent = winner ? pct(winner.gainPct) : "—";
+
+  document.getElementById("kpiLoser").textContent = loser ? loser.ticker : "—";
+  document.getElementById("kpiLoserPct").textContent = loser ? pct(loser.gainPct) : "—";
+
+  document.getElementById("kpiCount").textContent = String(portfolio.length);
+
+  buildTable(priced);
+  makeCharts(priced);
+
+  // Show missing tickers nicely (no crashing)
+  if (missing.length) {
+    console.warn("Missing tickers:", missing);
+    const msg = `Missing prices for: ${missing.join(", ")}. The dashboard is showing only tickers with prices.`;
+    const pill = document.createElement("span");
+    pill.className = "pill";
+    pill.textContent = `⚠ Missing: ${missing.length}`;
+    document.querySelector(".meta").appendChild(pill);
+    console.log(msg);
+  }
 }
 
-main().catch(err=>{
-  console.error(err);
-  alert("Dashboard error. Check console.");
-});
