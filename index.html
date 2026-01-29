@@ -10,8 +10,18 @@
 <body>
   <header class="header">
     <div class="title">📈 Portfolio Dashboard</div>
+
     <div class="meta">
       <span class="pill" id="asOf">As of: …</span>
+
+      <!-- ✅ Month filter pill -->
+      <span class="pill" style="display:flex;align-items:center;gap:.5rem;">
+        Month
+        <select id="monthSelect" style="background:transparent;color:inherit;border:none;outline:none;font:inherit;">
+          <option value="ALL">All</option>
+        </select>
+      </span>
+
       <span class="pill">Updates daily</span>
     </div>
   </header>
