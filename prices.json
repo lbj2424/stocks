@@ -15,17 +15,17 @@
     "PLTR": 157.35,
     "HOOD": 103.4,
     "CRDO": 129.66,
-    "MU": 170.14,      // Micron Technology
-    "AIQ": 49.48,      // Global X AI & Tech ETF (example)
-    "VOOG": 433.58,    // Vanguard S&P 500 Growth ETF
-    "SCHG": 31.84,     // Schwab U.S. Large-Cap Growth ETF
-    "ANET": 145.51,    // Arista Networks
-    "TSLA": 450.00,    // Tesla
-    "SOFI": 26.91,     // SoFi Technologies
-    "IBIT": 66.61,     // iShares Bitcoin Trust
-    "SPOT": 706.83,    // Spotify
-    "SE": 181.95,      // Sea Limited
-    "NFLX": 125.11     // Netflix
+    "MU": 170.14,     
+    "AIQ": 49.48,      
+    "VOOG": 433.58,   
+    "SCHG": 31.84,     
+    "ANET": 145.51, 
+    "TSLA": 450.00,    
+    "SOFI": 26.91,     
+    "IBIT": 66.61,    
+    "SPOT": 706.83,   
+    "SE": 181.95,      
+    "NFLX": 125.11     
   },
   "missing": []
 }
