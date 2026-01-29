@@ -48,6 +48,25 @@ select:focus {
   outline: none;
   border-color: #3b82f6;
 }
+.tickerInput{
+  background: rgba(255,255,255,.06);
+  color: var(--text);
+  border: 1px solid rgba(255,255,255,.14);
+  padding: 8px 12px;
+  border-radius: 999px;
+  font-size: 14px;
+  outline: none;
+  min-width: 220px;
+}
+.tickerInput::placeholder{ color: rgba(232,238,252,.6); }
+.tickerInput:focus{
+  border-color: rgba(59,130,246,.8);
+  box-shadow: 0 0 0 3px rgba(59,130,246,.15);
+}
+
+th.sortable{ cursor: pointer; user-select: none; }
+th.sortable:hover{ background: rgba(255,255,255,.04); }
+
 
 @media (max-width:900px){
   .kpis{grid-template-columns:repeat(2,minmax(0,1fr))}
