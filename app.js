@@ -4,6 +4,8 @@ function pct(n){ return (n*100).toFixed(2) + "%"; }
 // ---------- Chart instances (so we can update them) ----------
 let allocChart = null;
 let gainsChart = null;
+let timelineChart = null;
+
 
 // ---------- CSV + parsing helpers (robust) ----------
 function parseCSVLine(line) {
@@ -154,6 +156,70 @@ function makeCharts(rows){
     }
   });
 }
+function makeTimelineChart(portfolioAllRows, priceMap, selectedMonth){
+  // Aggregate total portfolio value by month using current prices
+  const monthAgg = new Map(); // month -> { invested, value }
+
+  for (const p of portfolioAllRows) {
+    const m = String(p.month || "").trim();
+    if (!m) continue;
+
+    const t = String(p.ticker || "").trim().toUpperCase();
+    if (!t) continue;
+
+    const price = priceMap[t];
+    if (typeof price !== "number" || Number.isNaN(price)) continue;
+
+    const shares = Number(p.shares);
+    const invested = Number(p.total_cost);
+    if (!Number.isFinite(shares) || shares <= 0 || !Number.isFinite(invested)) continue;
+
+    const value = shares * price;
+
+    if (!monthAgg.has(m)) monthAgg.set(m, { invested: 0, value: 0 });
+    const agg = monthAgg.get(m);
+    agg.invested += invested;
+    agg.value += value;
+  }
+
+  const months = [...monthAgg.keys()].sort();
+  const values = months.map(m => monthAgg.get(m).value);
+
+  // Highlight the selected month point (bigger dot)
+  const pointRadius = months.map(m => (m === selectedMonth ? 6 : 2));
+
+  if (timelineChart) timelineChart.destroy();
+
+  const ctx = document.getElementById("chartTimeline");
+  if (!ctx) return;
+
+  timelineChart = new Chart(ctx, {
+    type: "line",
+    data: {
+      labels: months,
+      datasets: [{
+        label: "Value",
+        data: values,
+        tension: 0.25,
+        pointRadius
+      }]
+    },
+    options: {
+      plugins: {
+        legend: { labels: { color: "#e8eefc" } },
+        tooltip: {
+          callbacks: {
+            label: (c) => ` ${money(c.raw)}`
+          }
+        }
+      },
+      scales: {
+        x: { ticks: { color: "#e8eefc" } },
+        y: { ticks: { color: "#e8eefc", callback: (v) => money(v) } }
+      }
+    }
+  });
+}
 
 // ---------- main ----------
 async function main(){
@@ -185,6 +251,8 @@ async function main(){
   }
 
   const selectedMonth = sel ? sel.value : "ALL";
+  makeTimelineChart(portfolio, priceMap, selectedMonth === "ALL" ? "" : selectedMonth);
+
 
   const portfolioFiltered =
     selectedMonth === "ALL"
