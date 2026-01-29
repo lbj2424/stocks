@@ -169,15 +169,17 @@ function monthLabel(m){
 const vLinePlugin = {
   id: "vLinePlugin",
   afterDatasetsDraw(chart, args, opts) {
-    const { selectedIndex } = opts || {};
+    const selectedIndex = opts?.selectedIndex;
     if (selectedIndex == null || selectedIndex < 0) return;
 
     const { ctx, chartArea } = chart;
     const xScale = chart.scales.x;
     if (!xScale) return;
 
-    const label = chart.data.labels[selectedIndex];
-const x = xScale.getPixelForValue(label);
+    // ✅ Category scale wants an INDEX here
+    const x = xScale.getPixelForValue(selectedIndex);
+    if (!Number.isFinite(x)) return;
+
     if (x < chartArea.left || x > chartArea.right) return;
 
     ctx.save();
@@ -191,6 +193,7 @@ const x = xScale.getPixelForValue(label);
     ctx.restore();
   }
 };
+
 
 function makeTimelineChart(portfolioAllRows, priceMap, selectedMonth){
   const monthAgg = new Map(); // month -> { invested, value }
@@ -216,6 +219,72 @@ function makeTimelineChart(portfolioAllRows, priceMap, selectedMonth){
     agg.invested += invested;
     agg.value += value;
   }
+
+  let months = [...monthAgg.keys()].sort();
+
+  // ✅ If a month is selected, show timeline up to that month
+  if (selectedMonth && selectedMonth !== "ALL") {
+    months = months.filter(m => m <= selectedMonth);
+  }
+
+  const investedSeries = months.map(m => monthAgg.get(m).invested);
+  const valueSeries    = months.map(m => monthAgg.get(m).value);
+  const gainPctSeries  = months.map((m, i) => {
+    const inv = investedSeries[i];
+    const val = valueSeries[i];
+    return inv === 0 ? 0 : ((val - inv) / inv) * 100;
+  });
+
+  const labels = months.map(monthLabel);
+
+  // cursor should always be last point now (for selected month)
+  const selectedIndex = months.length ? months.length - 1 : -1;
+  const pointRadius = months.map((m, i) => (i === selectedIndex ? 5 : 2));
+
+  if (timelineChart) timelineChart.destroy();
+
+  const ctx = document.getElementById("chartTimeline");
+  if (!ctx) return;
+
+  timelineChart = new Chart(ctx, {
+    type: "line",
+    data: {
+      labels,
+      datasets: [
+        { label: "Value", data: valueSeries, tension: 0.25, pointRadius, yAxisID: "y" },
+        { label: "Invested", data: investedSeries, tension: 0.25, pointRadius: 0, borderDash: [6,4], yAxisID: "y" },
+        { label: "Gain %", data: gainPctSeries, tension: 0.25, pointRadius, yAxisID: "y1" }
+      ]
+    },
+    options: {
+      plugins: {
+        legend: { labels: { color: "#e8eefc" } },
+        tooltip: {
+          callbacks: {
+            label: (c) => {
+              const i = c.dataIndex;
+              const inv = investedSeries[i];
+              const val = valueSeries[i];
+              const gain = val - inv;
+              const gp = inv === 0 ? 0 : (gain / inv) * 100;
+
+              if (c.dataset.label === "Gain %") return ` Gain %: ${gp.toFixed(2)}%`;
+              if (c.dataset.label === "Invested") return ` Invested: ${money(inv)}`;
+              return ` Value: ${money(val)} (Gain: ${money(gain)})`;
+            }
+          }
+        },
+        vLinePlugin: { selectedIndex }
+      },
+      scales: {
+        x: { ticks: { color: "#e8eefc" }, grid: { color: "rgba(255,255,255,.06)" } },
+        y: { ticks: { color: "#e8eefc", callback: (v) => money(v) }, grid: { color: "rgba(255,255,255,.06)" } },
+        y1: { position: "right", ticks: { color: "#e8eefc", callback: (v) => `${v}%` }, grid: { drawOnChartArea: false } }
+      }
+    },
+    plugins: [vLinePlugin]
+  });
+}
 
   const months = [...monthAgg.keys()].sort();
   const investedSeries = months.map(m => monthAgg.get(m).invested);
