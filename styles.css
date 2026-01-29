@@ -28,4 +28,29 @@ tbody tr:hover{background:rgba(255,255,255,.04)}
 @media (max-width:900px){
   .kpis{grid-template-columns:repeat(2,minmax(0,1fr))}
   .charts{grid-template-columns:1fr}
+  /* Month dropdown visibility fix */
+select {
+  background-color: #0f172a;   /* dark slate background */
+  color: #e8eefc;              /* light text */
+  border: 1px solid #2a3246;
+  padding: 6px 10px;
+  border-radius: 999px;        /* pill style */
+  font-size: 0.9rem;
+  appearance: none;            /* cleaner look */
+}
+
+/* Dropdown options */
+select option {
+  background-color: #0f172a;
+  color: #e8eefc;
+}
+
+/* Hover & focus states */
+select:hover,
+select:focus {
+  background-color: #1e293b;
+  outline: none;
+  border-color: #3b82f6;
+}
+
 }
