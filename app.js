@@ -6,6 +6,8 @@ let allocChart = null;
 let gainsChart = null;
 let timelineChart = null;
 let sortState = { key: "value", dir: "desc" }; // default sort like you do now
+let currentTableRows = [];
+
 
 
 // ---------- CSV + parsing helpers (robust) ----------
@@ -407,7 +409,7 @@ async function main(){
     priced.push({ ticker: t, shares, avg_cost, price, invested, value, gain, gainPct });
   }
 
-  priced.sort((a,b) => b.value - a.value);
+
 
   const totalInvested = priced.reduce((s,r) => s + r.invested, 0);
   const totalValue    = priced.reduce((s,r) => s + r.value, 0);
@@ -430,14 +432,18 @@ async function main(){
 
   document.getElementById("kpiCount").textContent = String(priced.length);
 
- // ✅ sorting hook (works for ALL or month-filtered because priced already filtered)
-initMainTableSorting(() => priced);
+// ✅ sorting hook (init once)
+initMainTableSorting(() => currentTableRows);
+
+// ✅ update the “current rows” to whatever month is selected
+currentTableRows = priced;
 
 // ✅ apply current sort before showing
-const pricedSorted = sortRows(priced, sortState.key, sortState.dir);
+const pricedSorted = sortRows(currentTableRows, sortState.key, sortState.dir);
 
 buildTable(pricedSorted);
 makeCharts(pricedSorted);
+
 
 
   if (missing.length) {
