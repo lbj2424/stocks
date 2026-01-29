@@ -14,7 +14,18 @@
     "CTRE": 36.52,
     "PLTR": 157.35,
     "HOOD": 103.4,
-    "CRDO": 129.66
+    "CRDO": 129.66,
+    "MU": 170.14,      // Micron Technology
+    "AIQ": 49.48,      // Global X AI & Tech ETF (example)
+    "VOOG": 433.58,    // Vanguard S&P 500 Growth ETF
+    "SCHG": 31.84,     // Schwab U.S. Large-Cap Growth ETF
+    "ANET": 145.51,    // Arista Networks
+    "TSLA": 450.00,    // Tesla
+    "SOFI": 26.91,     // SoFi Technologies
+    "IBIT": 66.61,     // iShares Bitcoin Trust
+    "SPOT": 706.83,    // Spotify
+    "SE": 181.95,      // Sea Limited
+    "NFLX": 125.11     // Netflix
   },
   "missing": []
 }
