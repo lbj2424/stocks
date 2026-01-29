@@ -1,6 +1,10 @@
 function money(n){ return n.toLocaleString(undefined,{style:"currency",currency:"USD"}); }
 function pct(n){ return (n*100).toFixed(2) + "%"; }
 
+// ---------- Chart instances (so we can update them) ----------
+let allocChart = null;
+let gainsChart = null;
+
 // ---------- CSV + parsing helpers (robust) ----------
 function parseCSVLine(line) {
   const out = [];
@@ -62,11 +66,11 @@ async function loadCSV(path){
       headers.forEach((h,i) => row[h] = parts[i]);
 
       return {
-  ticker: String(row.ticker || "").trim(),
-  shares: toNumber(row.shares),
-  total_cost: toNumber(row.total_cost),
-  month: String(row.month || "").trim()
-     };
+        ticker: String(row.ticker || "").trim(),
+        shares: toNumber(row.shares),
+        total_cost: toNumber(row.total_cost),
+        month: String(row.month || "").trim()
+      };
     });
 }
 
@@ -98,19 +102,37 @@ function buildTable(rows){
 }
 
 function makeCharts(rows){
-  const labels = rows.map(r => r.ticker);
-  const values = rows.map(r => r.value);
-  const gains  = rows.map(r => r.gainPct * 100);
+  // ✅ Aggregate by ticker so charts/legend are readable and stable
+  const byTicker = new Map();
+  for (const r of rows) {
+    const key = r.ticker;
+    if (!byTicker.has(key)) {
+      byTicker.set(key, { ticker: key, value: 0, invested: 0 });
+    }
+    const agg = byTicker.get(key);
+    agg.value += r.value;
+    agg.invested += r.invested;
+  }
+
+  const aggRows = [...byTicker.values()].sort((a,b) => b.value - a.value);
+
+  const labels = aggRows.map(r => r.ticker);
+  const values = aggRows.map(r => r.value);
+  const gains  = aggRows.map(r => r.invested === 0 ? 0 : ((r.value - r.invested) / r.invested) * 100);
+
+  // ✅ Destroy old charts so changing month actually updates visuals
+  if (allocChart) allocChart.destroy();
+  if (gainsChart) gainsChart.destroy();
 
   const ctxA = document.getElementById("chartAlloc");
-  new Chart(ctxA, {
+  allocChart = new Chart(ctxA, {
     type: "doughnut",
     data: { labels, datasets: [{ data: values }] },
     options: { plugins: { legend: { position: "bottom", labels: { color: "#e8eefc" } } } }
   });
 
   const ctxG = document.getElementById("chartGains");
-  new Chart(ctxG, {
+  gainsChart = new Chart(ctxG, {
     type: "bar",
     data: { labels, datasets: [{ label: "Gain %", data: gains }] },
     options: {
@@ -134,12 +156,11 @@ async function main(){
   // ---------------- Month dropdown setup ----------------
   const sel = document.getElementById("monthSelect");
 
-  // Get all months from CSV (ignore blanks)
-  const months = [...new Set(portfolio.map(r => String(r.month || "").trim()).filter(Boolean))].sort();
+  const months = [...new Set(
+    portfolio.map(r => String(r.month || "").trim()).filter(Boolean)
+  )].sort();
 
-  // Populate dropdown once
   if (sel && !sel.dataset.populated) {
-    // Clear to: All + dynamic months
     sel.innerHTML = `<option value="ALL">All</option>`;
     for (const m of months) {
       const opt = document.createElement("option");
@@ -149,13 +170,12 @@ async function main(){
     }
     sel.dataset.populated = "1";
 
-    // Re-run dashboard on change
+    // ✅ Re-run dashboard on change
     sel.addEventListener("change", () => main());
   }
 
   const selectedMonth = sel ? sel.value : "ALL";
 
-  // Filter portfolio by month
   const portfolioFiltered =
     selectedMonth === "ALL"
       ? portfolio
@@ -220,9 +240,8 @@ async function main(){
   document.getElementById("kpiCount").textContent = String(priced.length);
 
   buildTable(priced);
-  makeCharts(priced);
+  makeCharts(priced); // ✅ now charts update per month
 
-  // Missing pill
   if (missing.length) {
     const pill = document.createElement("span");
     pill.className = "pill missingPill";
