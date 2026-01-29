@@ -2,18 +2,22 @@ function money(n){ return n.toLocaleString(undefined,{style:"currency",currency:
 function pct(n){ return (n*100).toFixed(2) + "%"; }
 
 async function loadCSV(path){
-  const txt = await fetch(path, {cache:"no-store"}).then(r=>r.text());
+  const txt = await fetch(path, { cache: "no-store" }).then(r => r.text());
   const [header, ...lines] = txt.trim().split(/\r?\n/);
-  const cols = header.split(",").map(s=>s.trim());
-  return lines.map(line=>{
-    const parts = line.split(",").map(s=>s.trim());
+  const cols = header.split(",").map(s => s.trim());
+
+  return lines.map(line => {
+    const parts = line.split(",").map(s => s.trim());
     const row = {};
-    cols.forEach((c,i)=> row[c]=parts[i]);
+    cols.forEach((c,i) => row[c] = parts[i]);
+
     row.shares = Number(row.shares);
-    row.avg_cost = Number(row.avg_cost);
+    row.total_cost = Number(row.total_cost);
+
     return row;
   });
 }
+
 
 async function loadJSON(path){
   return fetch(path, {cache:"no-store"}).then(r=>r.json());
@@ -76,6 +80,7 @@ async function main(){
   const priced = [];
   const missing = [];
 
+  // ✅ NEW LOOP (uses total_cost instead of avg_cost)
   for (const p of portfolio) {
     const t = String(p.ticker).trim().toUpperCase();
     const price = priceMap[t];
@@ -85,12 +90,30 @@ async function main(){
       continue;
     }
 
-    const invested = p.shares * p.avg_cost;
-    const value = p.shares * price;
+    const invested = Number(p.total_cost);
+    const shares = Number(p.shares);
+
+    // guard against bad data
+    if (!Number.isFinite(invested) || !Number.isFinite(shares) || shares <= 0) {
+      missing.push(t);
+      continue;
+    }
+
+    const avg_cost = invested / shares;
+    const value = shares * price;
     const gain = value - invested;
     const gainPct = invested === 0 ? 0 : gain / invested;
 
-    priced.push({ ...p, ticker: t, price, invested, value, gain, gainPct });
+    priced.push({
+      ticker: t,
+      shares,
+      avg_cost,
+      price,
+      invested,
+      value,
+      gain,
+      gainPct
+    });
   }
 
   priced.sort((a,b)=> b.value - a.value);
