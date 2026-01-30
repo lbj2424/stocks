@@ -513,17 +513,18 @@ async function main(){
 document.getElementById("kpiCount").textContent = String(uniqueTickers.size);
 
 
-// ✅ sorting hook (init once)
-initMainTableSorting(() => currentTableRows);
-
 // ✅ update the “current rows” to whatever month is selected
 currentTableRows = priced;
+
+// ✅ sorting hook (init once) — header clicks will always sort currentTableRows
+initMainTableSorting(() => currentTableRows);
 
 // ✅ apply current sort before showing
 const pricedSorted = sortRows(currentTableRows, sortState.key, sortState.dir);
 
 buildTable(pricedSorted);
 makeCharts(pricedSorted);
+;
 
 
 
