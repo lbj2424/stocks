@@ -317,61 +317,6 @@ function renderTable(aggRows){
 }
 
 
-function buildContribTable(rows, showContribPct){
-  const table = document.getElementById("contribTable");
-  if (!table) return;
-
-  // hide/disable Contribution % column when totalGain <= 0
-  const header = document.getElementById("contribPctHeader");
-  if (header) header.style.display = showContribPct ? "" : "none";
-
-  const tbody = table.querySelector("tbody");
-  tbody.innerHTML = "";
-
-  for (const r of rows) {
-    const tr = document.createElement("tr");
-    const cls = r.gainPct >= 0 ? "pos" : "neg";
-
-    tr.innerHTML = `
-      <td style="text-align:left">${r.ticker}</td>
-      <td>${money(r.invested)}</td>
-      <td>${money(r.value)}</td>
-      <td class="${cls}">${money(r.gain)}</td>
-      <td class="${cls}">${pct(r.gainPct)}</td>
-      <td class="${cls}" style="display:${showContribPct ? "" : "none"}">
-        ${showContribPct ? (r.contribPct*100).toFixed(2) + "%" : "—"}
-      </td>
-      <td>${(r.weightPct*100).toFixed(2)}%</td>
-      <td>${r.txns}</td>
-    `;
-    tbody.appendChild(tr);
-  }
-}
-
-function initContribSorting(){
-  const table = document.getElementById("contribTable");
-  if (!table || table.dataset.sortInit) return;
-
-  const headers = table.querySelectorAll("thead th[data-sort]");
-  headers.forEach(th => {
-    th.addEventListener("click", () => {
-      const key = th.dataset.sort;
-
-      if (contribSortState.key === key) {
-        contribSortState.dir = contribSortState.dir === "asc" ? "desc" : "asc";
-      } else {
-        contribSortState.key = key;
-        contribSortState.dir = "desc";
-      }
-
-      const sorted = sortRows(currentContribRows, contribSortState.key, contribSortState.dir);
-      const showContribPct = table.dataset.showContribPct === "1";
-      buildContribTable(sorted, showContribPct);
-    });
-  });
-
-  table.dataset.sortInit = "1";
-}
 
 function setActivePeriod(periodKey){
   const btns = document.querySelectorAll(".periodBtn");
@@ -431,7 +376,6 @@ function makeContributionAnalysis(rows, priceMap){
   initContribSorting();
 
   const sorted = sortRows(currentContribRows, contribSortState.key, contribSortState.dir);
-  buildContribTable(sorted, showContribPct);
 }
 
 // ---------------- Main ----------------
