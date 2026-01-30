@@ -70,6 +70,74 @@ th[data-sort]{ cursor:pointer; }
 th[data-sort]:hover{ text-decoration: underline; }
 
 
+/* ---- Performance page extras ---- */
+.periodBar{
+  display:flex;
+  gap:10px;
+  flex-wrap:wrap;
+  margin-top:10px;
+}
+
+.periodBtn{
+  border:1px solid rgba(255,255,255,.14);
+  background:rgba(255,255,255,.04);
+  color:var(--text);
+  padding:8px 12px;
+  border-radius:999px;
+  cursor:pointer;
+  font-size:12px;
+}
+
+.periodBtn:hover{
+  background:rgba(255,255,255,.08);
+}
+
+.periodBtn.active{
+  background:#1e293b;
+  border-color:#3b82f6;
+}
+
+.periodMeta{
+  margin-top:10px;
+  font-size:12px;
+  color:var(--muted);
+}
+
+.bwGrid{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:12px;
+}
+
+.bwBox{
+  border:1px solid rgba(255,255,255,.10);
+  border-radius:14px;
+  padding:12px;
+  background:rgba(255,255,255,.03);
+}
+
+.bwLabel{ font-size:12px; color:var(--muted); }
+.bwTicker{ font-size:22px; font-weight:800; margin-top:6px; }
+.bwSub{ font-size:12px; color:var(--muted); margin-top:2px; }
+
+.mutedBlock{
+  color:var(--muted);
+  font-size:12px;
+  line-height:1.35;
+}
+
+/* sortable header affordance */
+#perfTable thead th{
+  cursor:pointer;
+  user-select:none;
+}
+
+#perfTable thead th:hover{
+  background:rgba(255,255,255,.04);
+}
+
+
+
 
 @media (max-width:900px){
   .kpis{grid-template-columns:repeat(2,minmax(0,1fr))}
