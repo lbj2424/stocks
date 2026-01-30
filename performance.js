@@ -261,8 +261,8 @@ function sortRows(rows, key, dir){
       return String(av).localeCompare(String(bv)) * mult;
     }
 
-    const an = Number(av);
-    const bn = Number(bv);
+    const an = (av == null ? NaN : Number(av));
+    const bn = (bv == null ? NaN : Number(bv));
     if (Number.isNaN(an) && Number.isNaN(bn)) return 0;
     if (Number.isNaN(an)) return 1;
     if (Number.isNaN(bn)) return -1;
@@ -289,13 +289,18 @@ function initTableSorting(){
   table.dataset.sortInit = "1";
 }
 
-// ---------------- Render ----------------
 function renderTable(aggRows){
   const tbody = document.querySelector("#perfTable tbody");
   tbody.innerHTML = "";
 
   for (const r of aggRows) {
     const cls = r.gainPct >= 0 ? "pos" : "neg";
+
+    // show "—" if contribPct is null (ex: totalGain <= 0)
+    const contribText = (r.contribPct == null)
+      ? "—"
+      : (r.contribPct * 100).toFixed(2) + "%";
+
     const tr = document.createElement("tr");
     tr.innerHTML = `
       <td>${r.ticker}</td>
@@ -303,14 +308,14 @@ function renderTable(aggRows){
       <td>${money(r.value)}</td>
       <td class="${cls}">${money(r.gain)}</td>
       <td class="${cls}">${pct(r.gainPct)}</td>
+      <td class="${cls}">${contribText}</td>
       <td>${(r.weight * 100).toFixed(2)}%</td>
       <td>${r.txns}</td>
     `;
     tbody.appendChild(tr);
   }
 }
-let contribSortState = { key: "gain", dir: "desc" };
-let currentContribRows = [];
+
 
 function buildContribTable(rows, showContribPct){
   const table = document.getElementById("contribTable");
@@ -520,6 +525,11 @@ function renderForPeriod(portfolio, priceMap, asOfISO, asOfMonth, periodKey){
   // KPIs
   const totalGain = totalValue - totalInvested;
   const returnPct = totalInvested === 0 ? 0 : totalGain / totalInvested;
+  // contribution % (share of total portfolio gain for the period)
+for (const r of aggRows) {
+  r.contribPct = totalGain > 0 ? (r.gain / totalGain) : null;
+}
+
 
   document.getElementById("kpiInvested").textContent = money(totalInvested);
   document.getElementById("kpiValue").textContent = money(totalValue);
@@ -549,7 +559,6 @@ function renderForPeriod(portfolio, priceMap, asOfISO, asOfMonth, periodKey){
   currentAggRows = aggRows;
   const sorted = sortRows(currentAggRows, sortState.key, sortState.dir);
   renderTable(sorted);
-  makeContributionAnalysis(rows, priceMap);
 
 }
 
