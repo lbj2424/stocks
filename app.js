@@ -335,6 +335,85 @@ function makeTimelineChart(portfolioAllRows, priceMap, selectedMonth){
   });
 }
 
+function addMonths(date, n){
+  const d = new Date(date);
+  d.setMonth(d.getMonth() + n);
+  return d;
+}
+
+function xnpv(rate, cashflows){
+  // cashflows: [{date: Date, amount: number}]
+  const t0 = cashflows[0].date;
+  return cashflows.reduce((sum, cf) => {
+    const days = (cf.date - t0) / (1000 * 60 * 60 * 24);
+    return sum + cf.amount / Math.pow(1 + rate, days / 365);
+  }, 0);
+}
+
+function xirr(cashflows){
+  // Basic bisection solver for IRR
+  // Needs at least one negative and one positive cashflow
+  const hasNeg = cashflows.some(c => c.amount < 0);
+  const hasPos = cashflows.some(c => c.amount > 0);
+  if (!hasNeg || !hasPos) return null;
+
+  // sort by date
+  cashflows = [...cashflows].sort((a,b) => a.date - b.date);
+
+  let low = -0.9999;
+  let high = 10; // 1000% upper bound
+  let fLow = xnpv(low, cashflows);
+  let fHigh = xnpv(high, cashflows);
+
+  // If we can't bracket a root, return null
+  if (fLow * fHigh > 0) return null;
+
+  for (let i = 0; i < 100; i++){
+    const mid = (low + high) / 2;
+    const fMid = xnpv(mid, cashflows);
+
+    if (Math.abs(fMid) < 1e-8) return mid;
+
+    if (fLow * fMid < 0){
+      high = mid;
+      fHigh = fMid;
+    } else {
+      low = mid;
+      fLow = fMid;
+    }
+  }
+  return (low + high) / 2;
+}
+
+function calcPortfolioIRR(portfolioFiltered, priced, asOfStr){
+  // Build monthly contributions (cash outflows)
+  const byMonth = new Map();
+  for (const p of portfolioFiltered){
+    const m = String(p.month || "").trim();
+    if (!m) continue;
+    const cost = Number(p.total_cost);
+    if (!Number.isFinite(cost) || cost <= 0) continue;
+    byMonth.set(m, (byMonth.get(m) || 0) + cost);
+  }
+
+  const months = [...byMonth.keys()].sort(); // YYYY-MM sorts correctly
+  if (!months.length) return null;
+
+  const cashflows = months.map(m => {
+    const [y, mo] = m.split("-");
+    const d = new Date(Number(y), Number(mo) - 1, 1); // assume 1st of month
+    return { date: d, amount: -byMonth.get(m) };
+  });
+
+  // Ending value as positive inflow on asOf date
+  const asOf = asOfStr ? new Date(asOfStr) : new Date();
+  const totalValue = priced.reduce((s,r) => s + r.value, 0);
+  if (!Number.isFinite(totalValue) || totalValue <= 0) return null;
+
+  cashflows.push({ date: asOf, amount: totalValue });
+
+  return xirr(cashflows); // annualized rate (decimal)
+}
 
 
 // ---------- main ----------
@@ -430,7 +509,9 @@ async function main(){
   document.getElementById("kpiLoser").textContent    = loser ? loser.ticker : "—";
   document.getElementById("kpiLoserPct").textContent = loser ? pct(loser.gainPct) : "—";
 
-  document.getElementById("kpiCount").textContent = String(priced.length);
+  const uniqueTickers = new Set(priced.map(r => r.ticker));
+document.getElementById("kpiCount").textContent = String(uniqueTickers.size);
+
 
 // ✅ sorting hook (init once)
 initMainTableSorting(() => currentTableRows);
