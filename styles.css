@@ -136,6 +136,12 @@ th[data-sort]:hover{ text-decoration: underline; }
   background:rgba(255,255,255,.04);
 }
 
+.pill{
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+}
 
 
 
