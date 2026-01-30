@@ -143,37 +143,42 @@ th[data-sort]:hover{ text-decoration: underline; }
   .kpis{grid-template-columns:repeat(2,minmax(0,1fr))}
   .charts{grid-template-columns:1fr}
   /* ---------- Mobile header wrap fix (Option 1) ---------- */
+/* ---------- Mobile header layout fix ---------- */
 @media (max-width: 640px){
   .header{
-    flex-wrap: wrap;
+    flex-direction: column;
     align-items: flex-start;
     gap: 10px;
   }
 
-  /* put title on its own row */
-  .title{
-    flex: 1 1 100%;
+  /* group nav pills visually */
+  .header > .pill{
+    margin-right: 6px;
   }
 
-  /* make the pills row wrap nicely */
+  /* make nav pills scrollable instead of squished */
+  .header{
+    overflow-x: hidden;
+  }
+
+  .headerNav{
+    display: flex;
+    gap: 8px;
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  /* meta pills (as-of, month, updates) */
   .meta{
-    flex: 1 1 100%;
-    justify-content: flex-start;
-    gap: 10px;
+    width: 100%;
+    overflow-x: auto;
+    flex-wrap: nowrap;
+    gap: 8px;
   }
 
-  /* slightly larger / easier to tap */
-  .pill{
-    padding: 8px 12px;
-    font-size: 13px;
+  .meta::-webkit-scrollbar{
+    display: none;
   }
-
-  /* if month dropdown is inside meta, keep it matching pill sizing */
-  .meta select{
-    padding: 8px 12px;
-    font-size: 13px;
-  }
-}
-
 }
 
