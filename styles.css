@@ -142,5 +142,38 @@ th[data-sort]:hover{ text-decoration: underline; }
 @media (max-width:900px){
   .kpis{grid-template-columns:repeat(2,minmax(0,1fr))}
   .charts{grid-template-columns:1fr}
+  /* ---------- Mobile header wrap fix (Option 1) ---------- */
+@media (max-width: 640px){
+  .header{
+    flex-wrap: wrap;
+    align-items: flex-start;
+    gap: 10px;
+  }
+
+  /* put title on its own row */
+  .title{
+    flex: 1 1 100%;
+  }
+
+  /* make the pills row wrap nicely */
+  .meta{
+    flex: 1 1 100%;
+    justify-content: flex-start;
+    gap: 10px;
+  }
+
+  /* slightly larger / easier to tap */
+  .pill{
+    padding: 8px 12px;
+    font-size: 13px;
+  }
+
+  /* if month dropdown is inside meta, keep it matching pill sizing */
+  .meta select{
+    padding: 8px 12px;
+    font-size: 13px;
+  }
+}
+
 }
 
