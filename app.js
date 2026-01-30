@@ -512,6 +512,16 @@ async function main(){
   const uniqueTickers = new Set(priced.map(r => r.ticker));
 document.getElementById("kpiCount").textContent = String(uniqueTickers.size);
 
+  // ✅ Unique ticker count (not transactions)
+const uniqueTickers = new Set(priced.map(r => r.ticker));
+document.getElementById("kpiCount").textContent = String(uniqueTickers.size);
+
+// ✅ IRR (money-weighted, monthly approximation)
+const irr = calcPortfolioIRR(portfolioFiltered, priced, pricesFile.asOf);
+const irrText = irr == null ? "—" : `${(irr * 100).toFixed(2)}%`;
+document.getElementById("kpiIRR").textContent = irrText;
+
+
 
 // ✅ update the “current rows” to whatever month is selected
 currentTableRows = priced;
