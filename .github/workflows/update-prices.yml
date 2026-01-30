@@ -2,7 +2,7 @@ name: Update prices daily
 
 on:
   schedule:
-    - cron: "15 13 * * *"  # daily (UTC). Adjust later if you want.
+    - cron: "0 19 * * *"  # 12:00 PM MST (19:00 UTC)
   workflow_dispatch:
 
 permissions:
