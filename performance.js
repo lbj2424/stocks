@@ -551,53 +551,6 @@ function renderForPeriod(portfolio, priceMap, asOfISO, asOfMonth, periodKey){
   renderTable(sorted);
   makeContributionAnalysis(rows, priceMap);
 
-
-
-    const agg = byTicker.get(t);
-    agg.invested += invested;
-    agg.value += value;
-    agg.txns += 1;
-  }
-
-  const totalInvested = [...byTicker.values()].reduce((s,r)=>s+r.invested,0);
-  const totalValue    = [...byTicker.values()].reduce((s,r)=>s+r.value,0);
-  const totalGain     = totalValue - totalInvested;
-
-  const rows = [...byTicker.values()].map(r => {
-    const gain = r.value - r.invested;
-    const gainPct = r.invested === 0 ? 0 : gain / r.invested;
-    const weightPct = totalValue === 0 ? 0 : r.value / totalValue;
-
-    // contribution % ONLY meaningful when portfolio totalGain > 0
-    const contribPct = totalGain > 0 ? (gain / totalGain) : 0;
-
-    return { ...r, gain, gainPct, weightPct, contribPct };
-  });
-
-  // default sort: biggest gain dollars first
-  rows.sort((a,b) => b.gain - a.gain);
-
-  currentContribRows = rows;
-
-  const showContribPct = totalGain > 0;
-  const contribTable = document.getElementById("contribTable");
-  if (contribTable) contribTable.dataset.showContribPct = showContribPct ? "1" : "0";
-
-  // Optional: tweak note text depending on whether contribution is available
-  const note = document.getElementById("contribNote");
-  if (note) {
-    note.textContent = showContribPct
-      ? "Contribution % = ticker gain ÷ total portfolio gain (selected period)."
-      : "Portfolio gain is not positive for this period, so Contribution % is hidden.";
-  }
-
-  initContribSorting();
-
-  // apply current sort state (if user clicked before)
-  const sorted = sortRows(currentContribRows, contribSortState.key, contribSortState.dir);
-  buildContribTable(sorted, showContribPct);
-})();
-
 }
 
 main().catch(err => {
