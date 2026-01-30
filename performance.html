@@ -13,7 +13,6 @@
     <div class="meta">
       <span class="pill" id="asOf">As of: …</span>
 
-      <!-- nav pills (match dashboard vibe) -->
       <a class="pill" href="index.html">Dashboard</a>
       <a class="pill" href="ticker.html">Ticker Transactions</a>
     </div>
@@ -21,7 +20,6 @@
 
   <main class="wrap">
 
-    <!-- SECTION 1: Period Selector -->
     <section class="card">
       <div class="cardTitle">Select Period</div>
 
@@ -38,7 +36,6 @@
       <div class="periodMeta" id="periodMeta">…</div>
     </section>
 
-    <!-- SECTION 2: KPIs -->
     <section class="grid kpis" style="margin-top:14px;">
       <div class="card kpi"><div class="kpiLabel">Invested</div><div class="kpiValue" id="kpiInvested">$—</div></div>
       <div class="card kpi"><div class="kpiLabel">Value</div><div class="kpiValue" id="kpiValue">$—</div></div>
@@ -48,7 +45,6 @@
       <div class="card kpi"><div class="kpiLabel">Transactions</div><div class="kpiValue" id="kpiTxns">—</div><div class="kpiSub">in this period</div></div>
     </section>
 
-    <!-- SECTION 3: Breakdown -->
     <section class="grid charts" style="margin-top:14px;">
       <div class="card">
         <div class="cardTitle">Best / Worst</div>
@@ -81,23 +77,21 @@
         <table id="perfTable">
           <thead>
             <tr>
-  <th data-sort="ticker">Ticker</th>
-  <th data-sort="invested">Invested</th>
-  <th data-sort="value">Value</th>
-  <th data-sort="gain">Gain $</th>
-  <th data-sort="gainPct">Gain %</th>
-  <th data-sort="contribPct">Contribution %</th>
-  <th data-sort="weight">Weight %</th>
-  <th data-sort="txns">Txns</th>
-</tr>
-
+              <th data-sort="ticker">Ticker</th>
+              <th data-sort="invested">Invested</th>
+              <th data-sort="value">Value</th>
+              <th data-sort="gain">Gain $</th>
+              <th data-sort="gainPct">Gain %</th>
+              <th data-sort="contribPct">Contribution %</th>
+              <th data-sort="weight">Weight %</th>
+              <th data-sort="txns">Txns</th>
+            </tr>
           </thead>
           <tbody></tbody>
         </table>
       </div>
     </section>
- 
-
+  
   </main>
 
   <script src="performance.js"></script>
