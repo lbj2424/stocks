@@ -509,8 +509,6 @@ async function main(){
   document.getElementById("kpiLoser").textContent    = loser ? loser.ticker : "—";
   document.getElementById("kpiLoserPct").textContent = loser ? pct(loser.gainPct) : "—";
 
-  const uniqueTickers = new Set(priced.map(r => r.ticker));
-document.getElementById("kpiCount").textContent = String(uniqueTickers.size);
 
   // ✅ Unique ticker count (not transactions)
 const uniqueTickers = new Set(priced.map(r => r.ticker));
@@ -534,7 +532,6 @@ const pricedSorted = sortRows(currentTableRows, sortState.key, sortState.dir);
 
 buildTable(pricedSorted);
 makeCharts(pricedSorted);
-;
 
 
 
