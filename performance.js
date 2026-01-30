@@ -551,26 +551,7 @@ function renderForPeriod(portfolio, priceMap, asOfISO, asOfMonth, periodKey){
   renderTable(sorted);
   makeContributionAnalysis(rows, priceMap);
 
-  // ---------- Contribution Analysis (by ticker, respects portfolioFiltered) ----------
-(function makeContributionAnalysis(){
-  const byTicker = new Map();
 
-  for (const p of rows) {
-    const t = String(p.ticker || "").trim().toUpperCase();
-    if (!t) continue;
-
-    const price = priceMap[t];
-    if (typeof price !== "number" || Number.isNaN(price)) continue;
-
-    const shares = Number(p.shares);
-    const invested = Number(p.total_cost);
-    if (!Number.isFinite(shares) || shares <= 0 || !Number.isFinite(invested)) continue;
-
-    const value = shares * price;
-
-    if (!byTicker.has(t)) {
-      byTicker.set(t, { ticker: t, invested: 0, value: 0, txns: 0 });
-    }
 
     const agg = byTicker.get(t);
     agg.invested += invested;
