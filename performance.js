@@ -372,6 +372,62 @@ function setActivePeriod(periodKey){
   const btns = document.querySelectorAll(".periodBtn");
   btns.forEach(b => b.classList.toggle("active", b.dataset.period === periodKey));
 }
+function makeContributionAnalysis(rows, priceMap){
+  const byTicker = new Map();
+
+  for (const p of rows) {
+    const t = String(p.ticker || "").trim().toUpperCase();
+    if (!t) continue;
+
+    const price = priceMap[t];
+    if (typeof price !== "number" || Number.isNaN(price)) continue;
+
+    const shares = Number(p.shares);
+    const invested = Number(p.total_cost);
+    if (!Number.isFinite(shares) || shares <= 0 || !Number.isFinite(invested)) continue;
+
+    const value = shares * price;
+
+    if (!byTicker.has(t)) byTicker.set(t, { ticker: t, invested: 0, value: 0, txns: 0 });
+
+    const agg = byTicker.get(t);
+    agg.invested += invested;
+    agg.value += value;
+    agg.txns += 1;
+  }
+
+  const totalInvested = [...byTicker.values()].reduce((s,r)=>s+r.invested,0);
+  const totalValue    = [...byTicker.values()].reduce((s,r)=>s+r.value,0);
+  const totalGain     = totalValue - totalInvested;
+
+  const out = [...byTicker.values()].map(r => {
+    const gain = r.value - r.invested;
+    const gainPct = r.invested === 0 ? 0 : gain / r.invested;
+    const weightPct = totalValue === 0 ? 0 : r.value / totalValue;
+    const contribPct = totalGain > 0 ? (gain / totalGain) : 0;
+    return { ...r, gain, gainPct, weightPct, contribPct };
+  });
+
+  out.sort((a,b) => b.gain - a.gain);
+
+  currentContribRows = out;
+
+  const showContribPct = totalGain > 0;
+  const table = document.getElementById("contribTable");
+  if (table) table.dataset.showContribPct = showContribPct ? "1" : "0";
+
+  const note = document.getElementById("contribNote");
+  if (note) {
+    note.textContent = showContribPct
+      ? "Contribution % = ticker gain ÷ total portfolio gain (selected period)."
+      : "Portfolio gain is not positive for this period, so Contribution % is hidden.";
+  }
+
+  initContribSorting();
+
+  const sorted = sortRows(currentContribRows, contribSortState.key, contribSortState.dir);
+  buildContribTable(sorted, showContribPct);
+}
 
 // ---------------- Main ----------------
 async function main(){
@@ -493,11 +549,13 @@ function renderForPeriod(portfolio, priceMap, asOfISO, asOfMonth, periodKey){
   currentAggRows = aggRows;
   const sorted = sortRows(currentAggRows, sortState.key, sortState.dir);
   renderTable(sorted);
+  makeContributionAnalysis(rows, priceMap);
+
   // ---------- Contribution Analysis (by ticker, respects portfolioFiltered) ----------
 (function makeContributionAnalysis(){
   const byTicker = new Map();
 
-  for (const p of portfolioFiltered) {
+  for (const p of rows) {
     const t = String(p.ticker || "").trim().toUpperCase();
     if (!t) continue;
 
