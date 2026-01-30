@@ -142,6 +142,13 @@ th[data-sort]:hover{ text-decoration: underline; }
   justify-content: center;
   text-align: center;
 }
+#contribTable thead th{
+  cursor:pointer;
+  user-select:none;
+}
+#contribTable thead th:hover{
+  background:rgba(255,255,255,.04);
+}
 
 
 
