@@ -149,35 +149,6 @@ th[data-sort]:hover{ text-decoration: underline; }
 #contribTable thead th:hover{
   background:rgba(255,255,255,.04);
 }
-.pillBtn{
-  border: 0;
-  cursor: pointer;
-}
-/* Primary action pill (Update prices now) */
-.pillPrimary {
-  background: linear-gradient(135deg, #3b82f6, #2563eb);
-  color: #ffffff;
-  border: none;
-  font-weight: 600;
-}
-
-.pillPrimary:hover {
-  background: linear-gradient(135deg, #2563eb, #1d4ed8);
-}
-/* Normalize button pills */
-button.pill {
-  background: rgba(255,255,255,.06);
-  color: var(--text);
-  border: 1px solid rgba(255,255,255,.14);
-  cursor: pointer;
-}
-button.pill:hover {
-  background: rgba(255,255,255,.12);
-}
-
-button.pill:active {
-  transform: translateY(1px);
-}
 
 
 
@@ -227,5 +198,3 @@ button.pill:active {
     font-weight: 600;
   }
 }
-
-
