@@ -340,7 +340,7 @@ function renderForPeriod(portfolio, priceMap, asOfISO, asOfMonth, periodKey){
     return { ...r, gain, gainPct, weight: 0 };
   });
 
-  // 4. Calculate Weights (Using GLOBAL value, so it makes sense visually)
+  // 4. Calculate Weights
   for (const r of aggRows) {
     r.weight = globalTotalValue === 0 ? 0 : r.value / globalTotalValue;
   }
@@ -349,12 +349,16 @@ function renderForPeriod(portfolio, priceMap, asOfISO, asOfMonth, periodKey){
   const totalGain = totalValue - totalInvested;
   const returnPct = totalInvested === 0 ? 0 : totalGain / totalInvested;
    
-  // 5. Calculate Contribution % (Robust against negative gains)
+  // 5. Calculate Contribution %
   for (const r of aggRows) {
-    if (Math.abs(totalGain) < 0.01) {
-       r.contribPct = 0; // Total gain is effectively 0, can't divide
+    // FIX: logic based on Return %. 
+    // If return is less than 0.1% (essentially flat), calculating "contribution" 
+    // results in wacky numbers like 1700%. We hide it in that case.
+    if (Math.abs(returnPct) < 0.001) { 
+       r.contribPct = null; 
     } else {
-       r.contribPct = r.gain / totalGain;
+       // Also guard against totalGain being literal 0
+       r.contribPct = (Math.abs(totalGain) < 0.0001) ? null : (r.gain / totalGain);
     }
   }
 
