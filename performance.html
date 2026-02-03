@@ -10,12 +10,28 @@
   <header class="header">
     <div class="title">📊 Performance</div>
 
-    <div class="meta">
-      <span class="pill" id="asOf">As of: …</span>
+   <div class="meta">
+  <span class="pill" id="asOf">As of: …</span>
 
-      <a class="pill" href="index.html">Dashboard</a>
-      <a class="pill" href="ticker.html">Ticker Transactions</a>
-    </div>
+  <!-- Update prices (opens GitHub Actions workflow) -->
+  <a
+    class="pill"
+    href="https://github.com/lbj2424/stocks/actions/workflows/update-prices.yml?query=branch%3Amain"
+    target="_blank"
+    rel="noopener"
+  >
+    Update prices now
+  </a>
+
+  <!-- Refresh site after workflow finishes -->
+  <button class="pill pillBtn" id="refreshPrices" type="button">
+    Refresh
+  </button>
+
+  <a class="pill" href="index.html">Dashboard</a>
+  <a class="pill" href="ticker.html">Ticker Transactions</a>
+</div>
+
   </header>
 
   <main class="wrap">
