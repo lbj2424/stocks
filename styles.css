@@ -164,17 +164,19 @@ th[data-sort]:hover{ text-decoration: underline; }
 .pillPrimary:hover {
   background: linear-gradient(135deg, #2563eb, #1d4ed8);
 }
-/* Action pill (Update prices) */
-.pill.action {
-  background: rgba(255,255,255,0.08);
-  color: #fff;
-  border: 1px solid rgba(255,255,255,0.25);
-  font-weight: 500;
+/* Normalize button pills */
+button.pill {
+  background: rgba(255,255,255,.06);
+  color: var(--text);
+  border: 1px solid rgba(255,255,255,.14);
+  cursor: pointer;
+}
+button.pill:hover {
+  background: rgba(255,255,255,.12);
 }
 
-.pill.action:hover {
-  background: rgba(255,255,255,0.18);
-  border-color: rgba(255,255,255,0.4);
+button.pill:active {
+  transform: translateY(1px);
 }
 
 
