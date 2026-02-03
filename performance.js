@@ -447,6 +447,16 @@ function renderForPeriod(portfolio, priceMap, asOfISO, asOfMonth, periodKey){
   const sorted = sortRows(currentAggRows, sortState.key, sortState.dir);
   renderTable(sorted);
 }
+// --- UI buttons ---
+document.addEventListener("DOMContentLoaded", () => {
+  const refreshBtn = document.getElementById("refreshPrices");
+  if (refreshBtn) {
+    refreshBtn.addEventListener("click", () => {
+      // simplest + most reliable: full refresh so prices.json re-fetches
+      window.location.reload();
+    });
+  }
+});
 
 main().catch(err => {
   console.error(err);
