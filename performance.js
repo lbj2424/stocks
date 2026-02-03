@@ -1,7 +1,7 @@
 function money(n){ return Number(n).toLocaleString(undefined,{style:"currency",currency:"USD"}); }
 function pct(n){ return (n*100).toFixed(2) + "%"; }
 
-// ---------------- CSV parsing helpers ----------------
+// ---------------- CSV parsing helpers (same robust style) ----------------
 function parseCSVLine(line) {
   const out = [];
   let cur = "";
@@ -9,6 +9,7 @@ function parseCSVLine(line) {
 
   for (let i = 0; i < line.length; i++) {
     const ch = line[i];
+
     if (ch === '"') {
       if (inQuotes && line[i + 1] === '"') { cur += '"'; i++; }
       else { inQuotes = !inQuotes; }
@@ -18,6 +19,7 @@ function parseCSVLine(line) {
       cur += ch;
     }
   }
+
   out.push(cur);
   return out.map(v => v.trim());
 }
@@ -26,6 +28,7 @@ function toNumber(v){
   if (v == null) return NaN;
   const s = String(v).trim();
   if (!s) return NaN;
+
   const neg = s.startsWith("(") && s.endsWith(")");
   const cleaned = s.replace(/[,$%()]/g, "").replace(/\s+/g, "");
   const n = Number(cleaned);
@@ -33,12 +36,16 @@ function toNumber(v){
 }
 
 function normKey(k){
-  return String(k || "").trim().toLowerCase().replace(/\s+/g, "_");
+  return String(k || "")
+    .trim()
+    .toLowerCase()
+    .replace(/\s+/g, "_");
 }
 
 async function loadCSV(path){
   const txt = await fetch(path, { cache: "no-store" }).then(r => r.text());
   const clean = txt.replace(/^\uFEFF/, "");
+
   const [headerLine, ...lines] = clean.trim().split(/\r?\n/);
   const headers = parseCSVLine(headerLine).map(normKey);
 
@@ -48,6 +55,7 @@ async function loadCSV(path){
       const parts = parseCSVLine(line);
       const row = {};
       headers.forEach((h,i) => row[h] = parts[i]);
+
       return {
         ticker: String(row.ticker || "").trim(),
         shares: toNumber(row.shares),
@@ -62,7 +70,7 @@ async function loadJSON(path){
 }
 
 // ---------------- Period logic ----------------
-function monthFromISODate(iso){ 
+function monthFromISODate(iso){ // YYYY-MM-DD -> YYYY-MM
   const s = String(iso || "").trim();
   return s.slice(0,7);
 }
@@ -83,6 +91,7 @@ function quarterStartMonth(yyyymm){
 }
 
 function prevQuarterRange(yyyymm){
+  // returns {start, end} for previous completed quarter
   const [y, m] = yyyymm.split("-").map(Number);
   const thisQStart = Number(quarterStartMonth(yyyymm).split("-")[1]);
   let endMonth = thisQStart - 1;
@@ -92,20 +101,43 @@ function prevQuarterRange(yyyymm){
   const startMonth = endMonth - 2;
   const startYear = startMonth <= 0 ? endYear - 1 : endYear;
   const sm = startMonth <= 0 ? startMonth + 12 : startMonth;
-  return { start: `${startYear}-${String(sm).padStart(2,"0")}`, end: `${endYear}-${String(endMonth).padStart(2,"0")}` };
+
+  const start = `${startYear}-${String(sm).padStart(2,"0")}`;
+  const end   = `${endYear}-${String(endMonth).padStart(2,"0")}`;
+  return { start, end };
 }
 
 function inMonthRange(m, start, end){
+  // m, start, end are YYYY-MM and lexicographic compare works
   return m >= start && m <= end;
 }
 
 function periodRange(periodKey, asOfMonth){
-  if (periodKey === "MTD") return { label: "Month-to-Date", startMonth: asOfMonth, endMonth: asOfMonth };
-  if (periodKey === "QTD") return { label: "Quarter-to-Date", startMonth: quarterStartMonth(asOfMonth), endMonth: asOfMonth };
-  if (periodKey === "YTD") return { label: "Year-to-Date", startMonth: `${asOfMonth.slice(0,4)}-01`, endMonth: asOfMonth };
-  if (periodKey === "LM") { const lm = addMonths(asOfMonth, -1); return { label: "Last Month", startMonth: lm, endMonth: lm }; }
-  if (periodKey === "LQ") { const r = prevQuarterRange(asOfMonth); return { label: "Last Quarter", startMonth: r.start, endMonth: r.end }; }
-  if (periodKey === "LTM") { const start = addMonths(asOfMonth, -11); return { label: "Last 12 Months", startMonth: start, endMonth: asOfMonth }; }
+  // returns { label, startMonth, endMonth } where endMonth is included
+  if (periodKey === "MTD") {
+    return { label: "Month-to-Date", startMonth: asOfMonth, endMonth: asOfMonth };
+  }
+  if (periodKey === "QTD") {
+    const start = quarterStartMonth(asOfMonth);
+    return { label: "Quarter-to-Date", startMonth: start, endMonth: asOfMonth };
+  }
+  if (periodKey === "YTD") {
+    const y = asOfMonth.slice(0,4);
+    return { label: "Year-to-Date", startMonth: `${y}-01`, endMonth: asOfMonth };
+  }
+  if (periodKey === "LM") {
+    const lm = addMonths(asOfMonth, -1);
+    return { label: "Last Month", startMonth: lm, endMonth: lm };
+  }
+  if (periodKey === "LQ") {
+    const r = prevQuarterRange(asOfMonth);
+    return { label: "Last Quarter", startMonth: r.start, endMonth: r.end };
+  }
+  if (periodKey === "LTM") {
+    const start = addMonths(asOfMonth, -11);
+    return { label: "Last 12 Months", startMonth: start, endMonth: asOfMonth };
+  }
+  // SI
   return { label: "Since Inception", startMonth: null, endMonth: asOfMonth };
 }
 
@@ -118,9 +150,13 @@ function monthLabel(m){
   return `${names[n-1]} ${y}`;
 }
 
-// ---------------- IRR Logic ----------------
+// ---------------- IRR (money-weighted, monthly timing) ----------------
 function calcIRRMonthly(cashflows){
+  // cashflows: [{tMonths: number, amount: number}], tMonths from 0
+  // solve for monthly rate r such that NPV=0, return annualized
   if (!cashflows || cashflows.length < 2) return null;
+
+  // Need at least one negative and one positive
   let hasNeg = false, hasPos = false;
   for (const cf of cashflows) {
     if (cf.amount < 0) hasNeg = true;
@@ -136,29 +172,51 @@ function calcIRRMonthly(cashflows){
     return s;
   };
 
+  // Bisection on r in [-0.95, 10] monthly
   let lo = -0.95, hi = 10;
   let fLo = npv(lo), fHi = npv(hi);
   if (!Number.isFinite(fLo) || !Number.isFinite(fHi)) return null;
-  if (fLo * fHi > 0) { hi = 50; fHi = npv(hi); if (!Number.isFinite(fHi) || fLo * fHi > 0) return null; }
+
+  // If it doesn't bracket, try widening hi a bit
+  if (fLo * fHi > 0) {
+    hi = 50;
+    fHi = npv(hi);
+    if (!Number.isFinite(fHi) || fLo * fHi > 0) return null;
+  }
 
   for (let i = 0; i < 120; i++) {
     const mid = (lo + hi) / 2;
     const fMid = npv(mid);
     if (!Number.isFinite(fMid)) return null;
-    if (Math.abs(fMid) < 1e-8) { lo = hi = mid; break; }
-    if (fLo * fMid <= 0) { hi = mid; fHi = fMid; } else { lo = mid; fLo = fMid; }
+
+    if (Math.abs(fMid) < 1e-8) {
+      lo = hi = mid;
+      break;
+    }
+    if (fLo * fMid <= 0) {
+      hi = mid;
+      fHi = fMid;
+    } else {
+      lo = mid;
+      fLo = fMid;
+    }
   }
+
   const rMonthly = (lo + hi) / 2;
+  // annualize monthly -> (1+r)^12 - 1
   return Math.pow(1 + rMonthly, 12) - 1;
 }
 
 function buildCashflowsForPeriod(rows, priceMap, asOfISO){
   const asOfMonth = monthFromISODate(asOfISO);
+  // Use month index from earliest month in rows
   const months = rows.map(r => r.month).filter(Boolean).sort();
   if (!months.length) return null;
 
   const startMonth = months[0];
+
   const tIndex = (m) => {
+    // months difference from startMonth
     const [sy, sm] = startMonth.split("-").map(Number);
     const [y, mo] = m.split("-").map(Number);
     return (y - sy) * 12 + (mo - sm);
@@ -170,9 +228,11 @@ function buildCashflowsForPeriod(rows, priceMap, asOfISO){
     const t = String(r.ticker || "").trim().toUpperCase();
     const invested = Number(r.total_cost);
     if (!m || !t || !Number.isFinite(invested) || invested === 0) continue;
+
     cashflows.push({ tMonths: tIndex(m), amount: -invested });
   }
 
+  // ending value at asOf
   let endingValue = 0;
   for (const r of rows) {
     const t = String(r.ticker || "").trim().toUpperCase();
@@ -196,7 +256,11 @@ function sortRows(rows, key, dir){
   return [...rows].sort((a,b) => {
     const av = a[key];
     const bv = b[key];
-    if (typeof av === "string" || typeof bv === "string") return String(av).localeCompare(String(bv)) * mult;
+
+    if (typeof av === "string" || typeof bv === "string") {
+      return String(av).localeCompare(String(bv)) * mult;
+    }
+
     const an = (av == null ? NaN : Number(av));
     const bn = (bv == null ? NaN : Number(bv));
     if (Number.isNaN(an) && Number.isNaN(bn)) return 0;
@@ -209,15 +273,19 @@ function sortRows(rows, key, dir){
 function initTableSorting(){
   const table = document.getElementById("perfTable");
   if (!table || table.dataset.sortInit) return;
+
   const headers = table.querySelectorAll("thead th[data-sort]");
   headers.forEach(th => {
     th.addEventListener("click", () => {
       const key = th.dataset.sort;
+
       if (sortState.key === key) sortState.dir = sortState.dir === "asc" ? "desc" : "asc";
       else { sortState.key = key; sortState.dir = "desc"; }
+
       renderTable(sortRows(currentAggRows, sortState.key, sortState.dir));
     });
   });
+
   table.dataset.sortInit = "1";
 }
 
@@ -227,7 +295,11 @@ function renderTable(aggRows){
 
   for (const r of aggRows) {
     const cls = r.gainPct >= 0 ? "pos" : "neg";
-    const contribText = (r.contribPct == null) ? "—" : (r.contribPct * 100).toFixed(2) + "%";
+
+    // show "—" if contribPct is null (ex: totalGain <= 0)
+    const contribText = (r.contribPct == null)
+      ? "—"
+      : (r.contribPct * 100).toFixed(2) + "%";
 
     const tr = document.createElement("tr");
     tr.innerHTML = `
@@ -249,7 +321,7 @@ function setActivePeriod(periodKey){
   btns.forEach(b => b.classList.toggle("active", b.dataset.period === periodKey));
 }
 
-// ---------------- Main Logic ----------------
+// ---------------- Main ----------------
 async function main(){
   const portfolio  = await loadCSV("portfolio.csv");
   const pricesFile = await loadJSON("prices.json");
@@ -259,9 +331,12 @@ async function main(){
 
   document.getElementById("asOf").textContent = `As of: ${asOfISO || "—"}`;
 
+  // default period
   const bar = document.getElementById("periodBar");
   if (!bar.dataset.init) {
     bar.dataset.init = "1";
+
+    // default to YTD (feels most Bloomberg)
     window.__period = "YTD";
     setActivePeriod(window.__period);
 
@@ -279,20 +354,8 @@ async function main(){
 }
 
 function renderForPeriod(portfolio, priceMap, asOfISO, asOfMonth, periodKey){
-  
-  // 1. Calculate GLOBAL Total Value (Used for correct Weighting)
-  let globalTotalValue = 0;
-  for (const r of portfolio) {
-    const t = String(r.ticker || "").trim().toUpperCase();
-    const price = priceMap[t];
-    const shares = Number(r.shares);
-    if (price && shares > 0) {
-      globalTotalValue += (shares * price);
-    }
-  }
-
-  // 2. Filter for Period
   const { label, startMonth, endMonth } = periodRange(periodKey, asOfMonth);
+
   let rows = portfolio.filter(r => {
     const m = String(r.month || "").trim();
     if (!m) return false;
@@ -300,6 +363,7 @@ function renderForPeriod(portfolio, priceMap, asOfISO, asOfMonth, periodKey){
     return inMonthRange(m, startMonth, endMonth);
   });
 
+  // Period meta text
   const pm = document.getElementById("periodMeta");
   if (periodKey === "SI") {
     pm.textContent = `${label}: start → ${monthLabel(endMonth)} (monthly view)`;
@@ -307,14 +371,15 @@ function renderForPeriod(portfolio, priceMap, asOfISO, asOfMonth, periodKey){
     pm.textContent = `${label}: ${monthLabel(startMonth)} → ${monthLabel(endMonth)} (monthly view)`;
   }
 
-  // 3. Aggregate for Period
+  // Build totals and aggregate by ticker
   let totalInvested = 0;
   let totalValue = 0;
-  const byTicker = new Map();
 
+  const byTicker = new Map();
   for (const r of rows) {
     const t = String(r.ticker || "").trim().toUpperCase();
     if (!t) continue;
+
     const shares = Number(r.shares);
     const invested = Number(r.total_cost);
     const price = priceMap[t];
@@ -324,6 +389,7 @@ function renderForPeriod(portfolio, priceMap, asOfISO, asOfMonth, periodKey){
     if (typeof price !== "number" || Number.isNaN(price)) continue;
 
     const value = shares * price;
+
     totalInvested += invested;
     totalValue += value;
 
@@ -340,26 +406,16 @@ function renderForPeriod(portfolio, priceMap, asOfISO, asOfMonth, periodKey){
     return { ...r, gain, gainPct, weight: 0 };
   });
 
-  // 4. Calculate Weights
-  for (const r of aggRows) {
-    r.weight = globalTotalValue === 0 ? 0 : r.value / globalTotalValue;
-  }
+  // weights based on value
+  for (const r of aggRows) r.weight = totalValue === 0 ? 0 : r.value / totalValue;
 
   // KPIs
   const totalGain = totalValue - totalInvested;
   const returnPct = totalInvested === 0 ? 0 : totalGain / totalInvested;
-   
-  // 5. Calculate Contribution %
+  
+  // contribution % (share of total portfolio gain for the period)
   for (const r of aggRows) {
-    // FIX: logic based on Return %. 
-    // If return is less than 0.1% (essentially flat), calculating "contribution" 
-    // results in wacky numbers like 1700%. We hide it in that case.
-    if (Math.abs(returnPct) < 0.001) { 
-       r.contribPct = null; 
-    } else {
-       // Also guard against totalGain being literal 0
-       r.contribPct = (Math.abs(totalGain) < 0.0001) ? null : (r.gain / totalGain);
-    }
+    r.contribPct = totalGain > 0 ? (r.gain / totalGain) : null;
   }
 
   document.getElementById("kpiInvested").textContent = money(totalInvested);
@@ -371,6 +427,7 @@ function renderForPeriod(portfolio, priceMap, asOfISO, asOfMonth, periodKey){
   document.getElementById("kpiTickers").textContent = String(uniqueTickers.size);
   document.getElementById("kpiTxns").textContent = String(rows.length);
 
+  // Best / worst
   const best = [...aggRows].sort((a,b) => b.gainPct - a.gainPct)[0];
   const worst = [...aggRows].sort((a,b) => a.gainPct - b.gainPct)[0];
 
@@ -380,10 +437,12 @@ function renderForPeriod(portfolio, priceMap, asOfISO, asOfMonth, periodKey){
   document.getElementById("worstTicker").textContent = worst ? worst.ticker : "—";
   document.getElementById("worstPct").textContent = worst ? pct(worst.gainPct) : "—";
 
+  // IRR (monthly timing, then annualized)
   const cashflows = buildCashflowsForPeriod(rows, priceMap, asOfISO);
   const irr = cashflows ? calcIRRMonthly(cashflows) : null;
   document.getElementById("kpiIRR").textContent = irr == null ? "—%" : `${(irr*100).toFixed(2)}%`;
 
+  // table
   currentAggRows = aggRows;
   const sorted = sortRows(currentAggRows, sortState.key, sortState.dir);
   renderTable(sorted);
