@@ -164,13 +164,17 @@ th[data-sort]:hover{ text-decoration: underline; }
 .pillPrimary:hover {
   background: linear-gradient(135deg, #2563eb, #1d4ed8);
 }
-/* Active / current page pill */
-.pill.active,
-.pillCurrent {
-  background: #ffffff;
-  color: #0f172a;        /* dark text */
-  font-weight: 600;
-  border: none;
+/* Action pill (Update prices) */
+.pill.action {
+  background: rgba(255,255,255,0.08);
+  color: #fff;
+  border: 1px solid rgba(255,255,255,0.25);
+  font-weight: 500;
+}
+
+.pill.action:hover {
+  background: rgba(255,255,255,0.18);
+  border-color: rgba(255,255,255,0.4);
 }
 
 
