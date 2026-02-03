@@ -164,6 +164,14 @@ th[data-sort]:hover{ text-decoration: underline; }
 .pillPrimary:hover {
   background: linear-gradient(135deg, #2563eb, #1d4ed8);
 }
+/* Active / current page pill */
+.pill.active,
+.pillCurrent {
+  background: #ffffff;
+  color: #0f172a;        /* dark text */
+  font-weight: 600;
+  border: none;
+}
 
 
 
