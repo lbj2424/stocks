@@ -9,20 +9,16 @@
 <body>
   <header class="header">
     <div class="title">📊 Performance</div>
-
     <div class="meta">
       <span class="pill" id="asOf">As of: …</span>
-
       <a class="pill" href="index.html">Dashboard</a>
       <a class="pill" href="ticker.html">Ticker Transactions</a>
     </div>
   </header>
 
   <main class="wrap">
-
     <section class="card">
       <div class="cardTitle">Select Period</div>
-
       <div class="periodBar" id="periodBar">
         <button class="periodBtn" data-period="MTD">MTD</button>
         <button class="periodBtn" data-period="QTD">QTD</button>
@@ -32,7 +28,6 @@
         <button class="periodBtn" data-period="LTM">Last 12 Months</button>
         <button class="periodBtn" data-period="SI">Since Inception</button>
       </div>
-
       <div class="periodMeta" id="periodMeta">…</div>
     </section>
 
@@ -65,14 +60,15 @@
       <div class="card">
         <div class="cardTitle">Notes</div>
         <div class="mutedBlock" id="notes">
-          Return % is based on (Value − Invested) / Invested for the selected period. IRR is money weighted using monthly timing.
+          • Return % is based on (Value − Invested) / Invested for the selected period.<br>
+          • Weight % is based on the <strong>total portfolio value</strong>, not just the selected period.<br>
+          • IRR is money weighted using monthly timing.
         </div>
       </div>
     </section>
 
     <section class="card tableCard">
       <div class="cardTitle">Period Breakdown by Ticker</div>
-
       <div class="tableWrap">
         <table id="perfTable">
           <thead>
@@ -91,7 +87,6 @@
         </table>
       </div>
     </section>
-  
   </main>
 
   <script src="performance.js"></script>
