@@ -153,6 +153,17 @@ th[data-sort]:hover{ text-decoration: underline; }
   border: 0;
   cursor: pointer;
 }
+/* Primary action pill (Update prices now) */
+.pillPrimary {
+  background: linear-gradient(135deg, #3b82f6, #2563eb);
+  color: #ffffff;
+  border: none;
+  font-weight: 600;
+}
+
+.pillPrimary:hover {
+  background: linear-gradient(135deg, #2563eb, #1d4ed8);
+}
 
 
 
