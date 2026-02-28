@@ -38,7 +38,7 @@
       <div class="card kpi"><div class="kpiLabel">Top Loser</div><div class="kpiValue" id="kpiLoser">—</div><div class="kpiSub" id="kpiLoserPct">—%</div></div>
       <div class="card kpi"><div class="kpiLabel">Holdings</div><div class="kpiValue" id="kpiCount">—</div><div class="kpiSub">tickers</div></div>
       <div class="card">
-  <div class="kpiTitle">Portfolio IRR (Monthly)</div>
+  <div class="kpiLabel">Portfolio IRR (Monthly)</div>
   <div class="kpiValue" id="kpiIRR">—</div>
   <div class="kpiSub">money-weighted</div>
 </div>
@@ -57,7 +57,10 @@
     </section>
 
     <section class="card tableCard">
-      <div class="cardTitle">Holdings</div>
+      <div class="tableCardHeader">
+        <div class="cardTitle" style="margin:0;">Holdings</div>
+        <input id="holdingsSearch" type="search" placeholder="Filter ticker…" class="holdingsSearch" />
+      </div>
       <div class="tableWrap">
         <table id="holdingsTable">
           <thead>
@@ -83,6 +86,7 @@
 </section>
   </main>
 
+  <script src="utils.js"></script>
   <script src="app.js"></script>
 </body>
 </html>
