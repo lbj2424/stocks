@@ -54,11 +54,14 @@ async function loadCSV(path) {
       const parts = parseCSVLine(line);
       const row = {};
       headers.forEach((h, i) => row[h] = parts[i]);
+      const type = String(row.type || "buy").trim().toLowerCase() || "buy";
       return {
-        ticker: String(row.ticker || "").trim(),
-        shares: toNumber(row.shares),
-        total_cost: toNumber(row.total_cost),
-        month: String(row.month || "").trim()
+        ticker:        String(row.ticker || "").trim(),
+        shares:        toNumber(row.shares),
+        total_cost:    toNumber(row.total_cost),
+        month:         String(row.month || "").trim(),
+        type,
+        realized_gain: toNumber(row.realized_gain)
       };
     });
 }

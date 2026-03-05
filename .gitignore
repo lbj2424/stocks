@@ -1,0 +1,12 @@
+# Robinhood credentials — NEVER commit this
+.env
+
+# Robinhood session token saved by robin_stocks
+robinhood.pickle
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+.venv/
+venv/

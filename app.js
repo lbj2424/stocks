@@ -309,7 +309,8 @@ function calcPortfolioIRR(portfolioFiltered, priced, asOfStr) {
 
 // ---------- Render (called each time filter changes) ----------
 function render(portfolio, priceMap, asOf, selectedMonth) {
-  makeTimelineChart(portfolio, priceMap, selectedMonth);
+  // Timeline only uses buy rows so "invested" stays clean
+  makeTimelineChart(portfolio.filter(p => (p.type || "buy") === "buy"), priceMap, selectedMonth);
 
   const portfolioFiltered = selectedMonth === "ALL"
     ? portfolio
@@ -320,26 +321,69 @@ function render(portfolio, priceMap, asOf, selectedMonth) {
   const oldMissing = meta?.querySelector(".pill.missingPill");
   if (oldMissing) oldMissing.remove();
 
+  // ── Aggregate buys and sells per ticker ──────────────────────────────────
+  const byTicker = new Map();
+
+  for (const p of portfolioFiltered) {
+    const t    = String(p.ticker || "").trim().toUpperCase();
+    if (!t) continue;
+    const type = (p.type || "buy").toLowerCase();
+
+    if (!byTicker.has(t)) {
+      byTicker.set(t, { ticker: t, buyShares: 0, buyInvested: 0, sellShares: 0, sellCostBasis: 0, realizedGain: 0 });
+    }
+    const agg = byTicker.get(t);
+
+    const shares = Number(p.shares);
+    const cost   = Number(p.total_cost);
+
+    if (type === "buy") {
+      if (Number.isFinite(shares) && shares > 0 && Number.isFinite(cost)) {
+        agg.buyShares   += shares;
+        agg.buyInvested += cost;
+      }
+    } else if (type === "sell") {
+      const rg        = Number(p.realized_gain) || 0;
+      const costBasis = cost - rg; // proceeds - realized_gain = what those shares cost
+      if (Number.isFinite(shares) && shares > 0) {
+        agg.sellShares    += shares;
+        agg.sellCostBasis += costBasis;
+        agg.realizedGain  += rg;
+      }
+    }
+    // dividend rows are tallied separately below
+  }
+
+  // ── Build priced rows for current holdings ───────────────────────────────
   const priced  = [];
   const missing = [];
 
-  for (const p of portfolioFiltered) {
-    const t = String(p.ticker || "").trim().toUpperCase();
-    if (!t) continue;
+  for (const [t, agg] of byTicker) {
+    const netShares = agg.buyShares - agg.sellShares;
+    if (netShares < 1e-9) continue; // fully sold, skip from holdings
+
     const price = priceMap[t];
     if (typeof price !== "number" || Number.isNaN(price)) { missing.push(t); continue; }
-    const shares   = Number(p.shares);
-    const invested = Number(p.total_cost);
-    if (!Number.isFinite(shares) || shares <= 0 || !Number.isFinite(invested)) { missing.push(t); continue; }
 
-    const avg_cost = invested / shares;
-    const value    = shares * price;
+    const invested = agg.buyInvested - agg.sellCostBasis;
+    const value    = netShares * price;
     const gain     = value - invested;
     const gainPct  = invested === 0 ? 0 : gain / invested;
+    const avg_cost = netShares === 0 ? 0 : invested / netShares;
 
-    priced.push({ ticker: t, shares, avg_cost, price, invested, value, gain, gainPct });
+    priced.push({ ticker: t, shares: netShares, avg_cost, price, invested, value, gain, gainPct, realizedGain: agg.realizedGain });
   }
 
+  // ── Realized gains & dividends totals ────────────────────────────────────
+  const totalRealizedGain = portfolioFiltered
+    .filter(p => (p.type || "buy") === "sell")
+    .reduce((s, p) => s + (Number(p.realized_gain) || 0), 0);
+
+  const totalDividends = portfolioFiltered
+    .filter(p => (p.type || "buy") === "dividend")
+    .reduce((s, p) => s + (Number(p.total_cost) || 0), 0);
+
+  // ── KPI cards ─────────────────────────────────────────────────────────────
   const totalInvested = priced.reduce((s, r) => s + r.invested, 0);
   const totalValue    = priced.reduce((s, r) => s + r.value, 0);
   const totalGain     = totalValue - totalInvested;
@@ -360,8 +404,16 @@ function render(portfolio, priceMap, asOf, selectedMonth) {
   const uniqueTickers = new Set(priced.map(r => r.ticker));
   document.getElementById("kpiCount").textContent = String(uniqueTickers.size);
 
-  const irr = calcPortfolioIRR(portfolioFiltered, priced, asOf);
+  const irr = calcPortfolioIRR(portfolioFiltered.filter(p => (p.type || "buy") === "buy"), priced, asOf);
   document.getElementById("kpiIRR").textContent = irr == null ? "—" : `${(irr * 100).toFixed(2)}%`;
+
+  const rgEl = document.getElementById("kpiRealizedGain");
+  if (rgEl) {
+    rgEl.textContent = money(totalRealizedGain);
+    rgEl.className   = "kpiValue " + (totalRealizedGain >= 0 ? "pos" : "neg");
+  }
+  const divEl = document.getElementById("kpiDividends");
+  if (divEl) divEl.textContent = money(totalDividends);
 
   currentTableRows = priced;
   initMainTableSorting();
