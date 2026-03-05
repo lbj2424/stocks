@@ -20,7 +20,8 @@ from collections import defaultdict
 from dotenv import load_dotenv
 import robin_stocks.robinhood as rh
 
-load_dotenv()
+_here = os.path.dirname(os.path.abspath(__file__))
+load_dotenv(os.path.join(_here, ".env"))
 
 USERNAME = os.getenv("ROBINHOOD_USERNAME")
 PASSWORD = os.getenv("ROBINHOOD_PASSWORD")
