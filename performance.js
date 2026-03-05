@@ -99,12 +99,12 @@ function calcIRRMonthly(cashflows) {
   return Math.pow(1 + (lo + hi) / 2, 12) - 1;
 }
 
-function buildCashflowsForPeriod(rows, priceMap, asOfISO) {
-  const asOfMonth  = monthFromISODate(asOfISO);
-  const months     = rows.map(r => r.month).filter(Boolean).sort();
-  if (!months.length) return null;
+function buildCashflowsForPeriod(buyRows, sellRows, priceMap, asOfISO) {
+  const asOfMonth = monthFromISODate(asOfISO);
+  const allMonths = [...buyRows, ...sellRows].map(r => r.month).filter(Boolean).sort();
+  if (!allMonths.length) return null;
 
-  const startMonth = months[0];
+  const startMonth = allMonths[0];
   const tIndex = (m) => {
     const [sy, sm] = startMonth.split("-").map(Number);
     const [y,  mo] = m.split("-").map(Number);
@@ -112,17 +112,27 @@ function buildCashflowsForPeriod(rows, priceMap, asOfISO) {
   };
 
   const cashflows = [];
-  for (const r of rows) {
+
+  // Buys = money out (negative)
+  for (const r of buyRows) {
     const m        = String(r.month || "").trim();
-    const t        = String(r.ticker || "").trim().toUpperCase();
     const invested = Number(r.total_cost);
-    if (!m || !t || !Number.isFinite(invested) || invested === 0) continue;
+    if (!m || !Number.isFinite(invested) || invested <= 0) continue;
     cashflows.push({ tMonths: tIndex(m), amount: -invested });
   }
 
+  // Sell proceeds = money back in (positive)
+  for (const r of sellRows) {
+    const m        = String(r.month || "").trim();
+    const proceeds = Number(r.total_cost);
+    if (!m || !Number.isFinite(proceeds) || proceeds <= 0) continue;
+    cashflows.push({ tMonths: tIndex(m), amount: proceeds });
+  }
+
+  // Ending value = current market value of shares from buy rows
   let endingValue = 0;
-  for (const r of rows) {
-    const t     = String(r.ticker || "").trim().toUpperCase();
+  for (const r of buyRows) {
+    const t      = String(r.ticker || "").trim().toUpperCase();
     const price  = priceMap[t];
     const shares = Number(r.shares);
     if (typeof price !== "number" || Number.isNaN(price)) continue;
@@ -130,6 +140,7 @@ function buildCashflowsForPeriod(rows, priceMap, asOfISO) {
     endingValue += shares * price;
   }
 
+  if (endingValue <= 0 && sellRows.length === 0) return null;
   cashflows.push({ tMonths: tIndex(asOfMonth), amount: endingValue });
   return cashflows;
 }
@@ -243,11 +254,14 @@ function renderForPeriod(portfolio, priceMap, asOfISO, asOfMonth, periodKey) {
     ? `${label}: start → ${monthLabel(endMonth)} (monthly view)`
     : `${label}: ${monthLabel(startMonth)} → ${monthLabel(endMonth)} (monthly view)`;
 
+  const buyRows  = rows.filter(r => (r.type || "buy") === "buy");
+  const sellRows = rows.filter(r => (r.type || "buy") === "sell");
+
   let totalInvested = 0;
   let totalValue    = 0;
   const byTicker    = new Map();
 
-  for (const r of rows) {
+  for (const r of buyRows) {
     const t        = String(r.ticker || "").trim().toUpperCase();
     if (!t) continue;
     const shares   = Number(r.shares);
@@ -280,7 +294,7 @@ function renderForPeriod(portfolio, priceMap, asOfISO, asOfMonth, periodKey) {
   const returnPct = totalInvested === 0 ? 0 : totalGain / totalInvested;
 
   for (const r of aggRows) {
-    r.contribPct = totalGain > 0 ? r.gain / totalGain : null;
+    r.contribPct = totalGain !== 0 ? r.gain / totalGain : null;
   }
 
   document.getElementById("kpiInvested").textContent = money(totalInvested);
@@ -290,7 +304,7 @@ function renderForPeriod(portfolio, priceMap, asOfISO, asOfMonth, periodKey) {
 
   const uniqueTickers = new Set(aggRows.map(r => r.ticker));
   document.getElementById("kpiTickers").textContent = String(uniqueTickers.size);
-  document.getElementById("kpiTxns").textContent    = String(rows.length);
+  document.getElementById("kpiTxns").textContent    = String(buyRows.length);
 
   const sorted = aggRows.slice().sort((a, b) => b.gainPct - a.gainPct);
   const best   = sorted[0];
@@ -301,7 +315,7 @@ function renderForPeriod(portfolio, priceMap, asOfISO, asOfMonth, periodKey) {
   document.getElementById("worstTicker").textContent = worst ? worst.ticker : "—";
   document.getElementById("worstPct").textContent    = worst ? pct(worst.gainPct) : "—";
 
-  const cashflows = buildCashflowsForPeriod(rows, priceMap, asOfISO);
+  const cashflows = buildCashflowsForPeriod(buyRows, sellRows, priceMap, asOfISO);
   const irr       = cashflows ? calcIRRMonthly(cashflows) : null;
   document.getElementById("kpiIRR").textContent = irr == null ? "—%" : `${(irr * 100).toFixed(2)}%`;
 

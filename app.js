@@ -18,6 +18,7 @@ function getFilteredSortedRows() {
 // ---------- Cached data (loaded once) ----------
 let _portfolio = null;
 let _pricesFile = null;
+let _divBreakdown = []; // [{ticker, count, total}] updated each render
 
 // ---------- vLine plugin ----------
 const vLinePlugin = {
@@ -281,23 +282,39 @@ function xirr(cashflows) {
   return (low + high) / 2;
 }
 
-function calcPortfolioIRR(portfolioFiltered, priced, asOfStr) {
+function calcPortfolioIRR(buyRows, sellRows, priced, asOfStr) {
+  // Build per-month net cashflows: buys are outflows (-), sell proceeds are inflows (+)
   const byMonth = new Map();
-  for (const p of portfolioFiltered) {
+
+  for (const p of buyRows) {
     const m    = String(p.month || "").trim();
     if (!m) continue;
     const cost = Number(p.total_cost);
     if (!Number.isFinite(cost) || cost <= 0) continue;
-    byMonth.set(m, (byMonth.get(m) || 0) + cost);
+    if (!byMonth.has(m)) byMonth.set(m, { out: 0, in: 0 });
+    byMonth.get(m).out += cost;
+  }
+
+  for (const p of sellRows) {
+    const m        = String(p.month || "").trim();
+    if (!m) continue;
+    const proceeds = Number(p.total_cost);
+    if (!Number.isFinite(proceeds) || proceeds <= 0) continue;
+    if (!byMonth.has(m)) byMonth.set(m, { out: 0, in: 0 });
+    byMonth.get(m).in += proceeds;
   }
 
   const months = [...byMonth.keys()].sort();
   if (!months.length) return null;
 
-  const cashflows = months.map(m => {
+  const cashflows = [];
+  for (const m of months) {
     const [y, mo] = m.split("-");
-    return { date: new Date(Number(y), Number(mo) - 1, 1), amount: -byMonth.get(m) };
-  });
+    const date = new Date(Number(y), Number(mo) - 1, 1);
+    const { out, in: inflow } = byMonth.get(m);
+    if (out > 0)    cashflows.push({ date, amount: -out });
+    if (inflow > 0) cashflows.push({ date, amount: inflow });
+  }
 
   const asOf       = asOfStr ? new Date(asOfStr) : new Date();
   const totalValue = priced.reduce((s, r) => s + r.value, 0);
@@ -314,7 +331,7 @@ function render(portfolio, priceMap, asOf, selectedMonth) {
 
   const portfolioFiltered = selectedMonth === "ALL"
     ? portfolio
-    : portfolio.filter(r => String(r.month || "").trim() === selectedMonth);
+    : portfolio.filter(r => String(r.month || "").trim() <= selectedMonth);
 
   // Remove stale missing pill
   const meta       = document.querySelector(".meta");
@@ -379,9 +396,20 @@ function render(portfolio, priceMap, asOf, selectedMonth) {
     .filter(p => (p.type || "buy") === "sell")
     .reduce((s, p) => s + (Number(p.realized_gain) || 0), 0);
 
-  const totalDividends = portfolioFiltered
-    .filter(p => (p.type || "buy") === "dividend")
-    .reduce((s, p) => s + (Number(p.total_cost) || 0), 0);
+  const divRows = portfolioFiltered.filter(p => (p.type || "buy") === "dividend");
+  const totalDividends = divRows.reduce((s, p) => s + (Number(p.total_cost) || 0), 0);
+
+  // Build per-ticker dividend breakdown for the modal
+  const divByTicker = new Map();
+  for (const p of divRows) {
+    const t = String(p.ticker || "").trim().toUpperCase();
+    if (!t) continue;
+    if (!divByTicker.has(t)) divByTicker.set(t, { ticker: t, count: 0, total: 0 });
+    const d = divByTicker.get(t);
+    d.count++;
+    d.total += Number(p.total_cost) || 0;
+  }
+  _divBreakdown = [...divByTicker.values()].sort((a, b) => b.total - a.total);
 
   // ── KPI cards ─────────────────────────────────────────────────────────────
   const totalInvested = priced.reduce((s, r) => s + r.invested, 0);
@@ -404,7 +432,12 @@ function render(portfolio, priceMap, asOf, selectedMonth) {
   const uniqueTickers = new Set(priced.map(r => r.ticker));
   document.getElementById("kpiCount").textContent = String(uniqueTickers.size);
 
-  const irr = calcPortfolioIRR(portfolioFiltered.filter(p => (p.type || "buy") === "buy"), priced, asOf);
+  const irr = calcPortfolioIRR(
+    portfolioFiltered.filter(p => (p.type || "buy") === "buy"),
+    portfolioFiltered.filter(p => (p.type || "buy") === "sell"),
+    priced,
+    asOf
+  );
   document.getElementById("kpiIRR").textContent = irr == null ? "—" : `${(irr * 100).toFixed(2)}%`;
 
   const rgEl = document.getElementById("kpiRealizedGain");
@@ -466,6 +499,29 @@ async function main() {
   }
 
   render(_portfolio, priceMap, asOf, sel ? sel.value : "ALL");
+
+  // ── Dividend modal ────────────────────────────────────────────────────────
+  const divModal = document.getElementById("divModal");
+  const divCard  = document.getElementById("divCard");
+
+  function openDivModal() {
+    const tbody = document.querySelector("#divTable tbody");
+    tbody.innerHTML = "";
+    if (!_divBreakdown.length) {
+      tbody.innerHTML = `<tr><td colspan="3" style="text-align:center;color:var(--muted)">No dividends yet</td></tr>`;
+    } else {
+      for (const d of _divBreakdown) {
+        const tr = document.createElement("tr");
+        tr.innerHTML = `<td>${d.ticker}</td><td style="text-align:right">${d.count}</td><td style="text-align:right">${money(d.total)}</td>`;
+        tbody.appendChild(tr);
+      }
+    }
+    divModal.style.display = "flex";
+  }
+
+  divCard?.addEventListener("click", openDivModal);
+  document.getElementById("divModalClose")?.addEventListener("click", () => divModal.style.display = "none");
+  divModal?.addEventListener("click", e => { if (e.target === divModal) divModal.style.display = "none"; });
 }
 
 main().catch(err => {

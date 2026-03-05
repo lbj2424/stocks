@@ -38,7 +38,7 @@
       <div class="card kpi"><div class="kpiLabel">Top Loser</div><div class="kpiValue" id="kpiLoser">—</div><div class="kpiSub" id="kpiLoserPct">—%</div></div>
       <div class="card kpi"><div class="kpiLabel">Holdings</div><div class="kpiValue" id="kpiCount">—</div><div class="kpiSub">tickers</div></div>
       <div class="card kpi"><div class="kpiLabel">Realized Gains</div><div class="kpiValue" id="kpiRealizedGain">$—</div><div class="kpiSub">closed positions</div></div>
-      <div class="card kpi"><div class="kpiLabel">Dividends</div><div class="kpiValue" id="kpiDividends">$—</div><div class="kpiSub">total received</div></div>
+      <div class="card kpi kpiClickable" id="divCard" title="Click to see breakdown"><div class="kpiLabel">Dividends</div><div class="kpiValue" id="kpiDividends">$—</div><div class="kpiSub">total received ↗</div></div>
       <div class="card">
   <div class="kpiLabel">Portfolio IRR (Monthly)</div>
   <div class="kpiValue" id="kpiIRR">—</div>
@@ -87,6 +87,28 @@
   <canvas id="chartTimeline"></canvas>
 </section>
   </main>
+
+  <!-- Dividend breakdown modal -->
+  <div id="divModal" class="modalOverlay" style="display:none">
+    <div class="modalBox">
+      <div class="modalHeader">
+        <span class="modalTitle">Dividend Breakdown</span>
+        <button class="modalClose" id="divModalClose">✕</button>
+      </div>
+      <div class="tableWrap">
+        <table id="divTable">
+          <thead>
+            <tr>
+              <th style="text-align:left">Ticker</th>
+              <th>Payments</th>
+              <th>Total</th>
+            </tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
 
   <script src="utils.js"></script>
   <script src="app.js"></script>

@@ -213,6 +213,28 @@ th[data-key].sorted-desc::after  { content: " ▼"; font-size: 10px; opacity: .8
   font-weight: 600;
 }
 
+/* ---- Modal ---- */
+.modalOverlay{
+  position:fixed;inset:0;background:rgba(0,0,0,.6);
+  display:flex;align-items:center;justify-content:center;z-index:1000;
+}
+.modalBox{
+  background:#131a27;border:1px solid rgba(255,255,255,.14);
+  border-radius:16px;padding:20px;min-width:300px;max-width:460px;
+  width:90%;max-height:70vh;overflow-y:auto;
+}
+.modalHeader{
+  display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;
+}
+.modalTitle{font-weight:700;font-size:16px;}
+.modalClose{
+  background:none;border:none;color:var(--muted);cursor:pointer;
+  font-size:16px;padding:4px 8px;border-radius:6px;
+}
+.modalClose:hover{background:rgba(255,255,255,.08);color:var(--text);}
+.kpiClickable{cursor:pointer;transition:background .15s;}
+.kpiClickable:hover{background:rgba(255,255,255,.10);}
+
 @media (max-width:900px){
   .kpis{grid-template-columns:repeat(2,minmax(0,1fr))}
   .charts{grid-template-columns:1fr}
