@@ -174,9 +174,8 @@ function renderTable(aggRows) {
 
   for (const r of aggRows) {
     const cls         = r.gainPct >= 0 ? "pos" : "neg";
-    const contribText = r.contribPct == null
-      ? "—"
-      : (r.contribPct * 100).toFixed(2) + "%";
+    const contribCls  = r.contribPct >= 0 ? "pos" : "neg";
+    const contribText = (r.contribPct * 100).toFixed(2) + "%";
 
     const tr = document.createElement("tr");
     tr.innerHTML = `
@@ -185,7 +184,7 @@ function renderTable(aggRows) {
       <td>${money(r.value)}</td>
       <td class="${cls}">${money(r.gain)}</td>
       <td class="${cls}">${pct(r.gainPct)}</td>
-      <td class="${cls}">${contribText}</td>
+      <td class="${contribCls}">${contribText}</td>
       <td>${(r.weight * 100).toFixed(2)}%</td>
       <td>${r.txns}</td>
     `;
@@ -294,7 +293,7 @@ function renderForPeriod(portfolio, priceMap, asOfISO, asOfMonth, periodKey) {
   const returnPct = totalInvested === 0 ? 0 : totalGain / totalInvested;
 
   for (const r of aggRows) {
-    r.contribPct = totalGain !== 0 ? r.gain / totalGain : null;
+    r.contribPct = r.gainPct * r.weight;
   }
 
   document.getElementById("kpiInvested").textContent = money(totalInvested);
